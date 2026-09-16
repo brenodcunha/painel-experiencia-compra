@@ -1,0 +1,15 @@
+# credencial e dados do vendedor: NUNCA saem desta maquina
+conta.json
+dados.json
+*.bak
+*.log
+*.tmp
+__pycache__/
+.playwright-mcp/
+# medicoes feitas em contas reais (tem identificadores) — nao publicar
+audit/dados_*.json
+audit/passo0/
+audit/passo0_medicoes.md
+audit/apelidos.txt
+audit/_painel.js
+painel_experiencia_v*.zip

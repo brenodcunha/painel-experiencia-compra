@@ -1,0 +1,58 @@
+Fonte: https://www.mercadolivre.com.br/ajuda/31968  (capturado em 16/09/2026, texto renderizado da página)
+
+O que é a experiência de compra?
+É a percepção que os compradores têm sobre o seu anúncio, a qualidade do produto e o atendimento que você
+oferece antes, durante e depois da venda.
+Em cada anúncio, você encontra um indicador que detalha seu desempenho na experiência de compra com aquele
+produto. Pode ser boa, mediana ou ruim.
+Este indicador é essencial para a exposição dos seus anúncios. Se a experiência for boa, seus produtos aparecem
+no topo dos resultados. Se for mediana ou ruim, eles caem nos resultados de busca.
+Além disso, também comparamos você com os outros vendedores da mesma categoria. Assim, a Experiência de compra
+reflete não só seu desempenho, mas também como você está posicionado no mercado.
+
+Experiência de compra do seu anúncio | O que isso significa?
+🟢 Boa (75 - 100): Seu desempenho é muito bom e você se destaca em relação aos outros vendedores
+🟠 Mediana (74 - 50): Seu desempenho está pelo menos duas vezes abaixo da média dos vendedores da categoria.
+🔴 Ruim (30 ou menos): Seu desempenho está pelo menos três vezes abaixo da média dos vendedores da categoria.
+
+Como medimos a experiência de compra de um anúncio?
+Se o seu anúncio atingir 100 vendas totais em um período de 60 dias, calculamos a experiência com as
+informações dessas operações. Se não atingir o mínimo de vendas nesse período, usaremos as informações do
+último ano.
+Já se o seu anúncio tiver menos de 100 vendas, complementamos o cálculo com as informações de todos os seus
+outros anúncios da mesma categoria. Para isso, a categoria precisa ter pelo menos 200 vendas no total; caso
+contrário, o anúncio será exibido sem Experiência de compra.
+Por exemplo, se você vender tênis de um modelo específico e:
+- Tiver mais de 100 vendas, calculamos a experiência de compra do próprio anúncio.
+- Tiver menos de 100 vendas, calculamos a experiência levando em conta também o seu desempenho nos outros
+  anúncios de tênis.
+
+Que informações usamos para calculá-la?
+- As reclamações que foram sua responsabilidade, inclusive as excluídas da sua reputação por terem sido
+  gerenciadas no prazo.
+- Os envios com atraso ou realizados a partir de um depósito incorreto.
+- Os cancelamentos que você realiza.
+- Perguntas e respostas, e as opiniões que você recebe sobre seu produto.
+- As mensagens com seu comprador.
+- O título e a descrição do seu anúncio, caso tenham informações incompletas ou inconsistentes com o produto.
+
+(i) Em alguns dos seus anúncios, ainda não aplicamos o novo cálculo de Experiência de compra
+Nesses casos, o cálculo continua sendo determinado com base nas suas vendas dos últimos 180 dias e é definido
+avaliando seu desempenho de vendas, de acordo com as reclamações que você recebe, em comparação com os seus
+concorrentes.
+
+Como melhoro minha Experiência de compra?
+Seu indicador melhora com o tempo e ao oferecer bom atendimento nas suas novas vendas. O período de cálculo é
+atualizado diariamente: os problemas mais antigos pesam cada vez menos, e as novas vendas bem gerenciadas vão
+melhorando seu indicador.
+[...] Pausar ou excluir anúncios com muitas reclamações: se você tiver um anúncio com poucas vendas e muitos
+problemas, considere excluí-lo. Esse anúncio pode estar afetando o indicador de todos os seus anúncios nessa
+categoria.
+
+A experiência de compra é a mesma coisa que a reputação?
+Não. Enquanto a reputação avalia seu desempenho geral como vendedor, a experiência de compra mede o desempenho
+específico de cada anúncio ou categoria, dependendo do caso.
+
+O que acontece com meu anúncio se eu tiver o Benefício de reputação ou o Programa Decola ativo?
+Seus anúncios com experiência ruim ou mediana não perderão exposição nem serão pausados ou cancelados se você
+tiver o Benefício de reputação ou o Programa Decola ativo.

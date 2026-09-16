@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#e6eef5">
+<title>Experiência de Compra</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230b1220'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23fff' stroke-width='3.5'/%3E%3C/svg%3E">
+<style>
+/* ---------- tokens ----------
+   Paleta de status e sequencial: instancia de referencia da skill dataviz,
+   validada pelo scripts/validate_palette.js (modo claro, superficie #ffffff).
+   Texto NUNCA veste a cor da serie: valores e rotulos usam --ink/--ink-2/--muted,
+   e a identidade vem de um ponto colorido ao lado (mark), ou de um tom claro de
+   fundo com tinta escura da mesma familia (contraste >= 4.5:1 conferido). */
+:root{
+  color-scheme:light;
+  --page:#e6eef5; --bezel:#ffffff; --surface:#ffffff; --surface-2:#f3f7fb;
+  --hair:#e2e8ef; --hair-2:#cfd8e3;
+  --ink:#0b1220; --ink-2:#4b5563; --muted:#5f6b7a;
+  --accent:#2a78d6; --accent-ink:#1c5cab; --accent-tint:#e4effb;
+  --good:#0ca30c;  --good-ink:#006300;   --good-tint:#e3f5e3;
+  --warn:#fab219;  --warn-ink:#8a5a00;   --warn-tint:#fff1cc;
+  --ser:#ec835a;   --ser-ink:#9a3412;    --ser-tint:#fde6dc;
+  --crit:#d03b3b;  --crit-ink:#b91c1c;   --crit-tint:#fbe0e0;
+  --neu-ink:#4b5563; --neu-tint:#eef2f6;
+  /* familia so da coluna Situacao — seis chapas, todas cheias com texto branco.
+     Medido nas oito: pior par interno dE 13,6 (petroleo x cinza, os dois mais
+     antigos) e pior contra a familia da Taxa dE 15,7; todas passam de 4,5:1
+     com o texto branco. Nenhum caso divide chapa com outro. */
+  --espera:#4a3aa7; --calma:#64748b; --pausa:#115e59;
+  --punido:#720022; --semnota:#a4007e; --tarde:#000484; --decola:#854a00;
+  --r-lg:26px; --r:14px; --r-sm:8px;
+  --dur:160ms; --ease:cubic-bezier(.2,.7,.2,1);
+  --shadow:0 18px 50px rgba(11,18,32,.10), 0 2px 6px rgba(11,18,32,.05);
+}
+*{box-sizing:border-box}
+html{background:var(--page)}
+body{
+  margin:0;color:var(--ink);
+  font:15.5px/1.55 system-ui,-apple-system,"Segoe UI Variable","Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  /* aneis concentricos da referencia: estatico, sem animacao */
+  background:
+    repeating-radial-gradient(circle at 62% 12%, rgba(42,120,214,.075) 0 1px, transparent 1px 86px),
+    radial-gradient(1200px 700px at 62% 12%, #eef4fa 0%, var(--page) 60%);
+  min-height:100vh;
+}
+a{color:var(--accent-ink)}
+button{font:inherit;color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+:focus{outline:none}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)} .sm{font-size:13.5px}
+code{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12.5px;color:var(--muted)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- moldura branca (bezel) ---------- */
+.frame{max-width:1560px;margin:18px auto 60px;background:var(--bezel);border-radius:var(--r-lg);
+  padding:6px;box-shadow:var(--shadow);overflow:hidden}
+@media(max-width:700px){
+  .frame{margin:8px;border-radius:18px;padding:4px}
+  .hero{padding:16px 14px 44px;clip-path:polygon(0 0,100% 0,100% 100%,64px 100%,0 calc(100% - 34px))}
+  .top{gap:10px}
+  main{padding:14px 12px 30px}
+}
+
+/* ---------- faixa-heroi: degrade cinza -> ciano, canto chanfrado ---------- */
+/* Canto chanfrado da referencia. Em PX, nao em %: com % o corte crescia junto
+   com a altura do heroi e comia o rodape — mediu-se 53px de corte engolindo
+   60px do texto de progresso. Em px ele e previsivel, e o padding-bottom (52px)
+   e sempre maior que a altura do corte (46px), entao nada de conteudo entra nele. */
+.hero{position:relative;border-radius:calc(var(--r-lg) - 6px) calc(var(--r-lg) - 6px) 0 0;
+  padding:22px 26px 62px;color:var(--ink);
+  background:linear-gradient(112deg,#b1b6bb 0%,#a9c1d2 34%,#6fb0dc 68%,#3b97d3 100%);
+  clip-path:polygon(0 0,100% 0,100% 100%,92px 100%,0 calc(100% - 46px))}
+.hero:before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(560px 300px at 68% 40%, rgba(255,255,255,.35), transparent 70%)}
+.hero>*{position:relative}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand h1{font-size:clamp(21px,1.8vw,26px);margin:0;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.brand .sub{font-size:13.5px;color:var(--ink);font-weight:400;margin-top:3px}
+.brand .sub b{color:var(--ink);font-weight:600}
+.spacer{flex:1}
+
+[hidden]{display:none!important}   /* senao o display do .pill vence o atributo */
+
+/* pilulas de acao */
+.pill{display:inline-flex;align-items:center;gap:10px;border-radius:99px;padding:10px 18px;
+  border:1px solid transparent;font-size:14.5px;font-weight:600;cursor:pointer;
+  transition:transform var(--dur) var(--ease),background-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease)}
+.pill:hover{transform:translateY(-1px)} .pill:active{transform:scale(.98)}
+.pill.dark{background:var(--ink);color:#fff}
+.pill.dark:hover{background:#1c2536}
+.pill.dark .arr{display:inline-block;transition:transform var(--dur) var(--ease)}
+.pill.dark:hover .arr{transform:translateX(3px)}
+.pill.light{background:#fff;color:var(--ink);padding:5px 12px 5px 5px}
+.pill.light:hover{box-shadow:0 4px 14px rgba(11,18,32,.14)}
+.pill[disabled]{opacity:.7;cursor:progress;transform:none}
+.eu img,.eu .ini{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none;
+  background:var(--surface-2);border:1px solid var(--hair)}
+.eu .ini{display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;color:var(--muted)}
+.eu .qn{line-height:1.2;text-align:left}
+.eu .qn b{display:block;font-size:14px}
+.eu .qn span{font-size:12px;color:var(--muted);font-weight:400}
+.eu .cv{font-style:normal;font-size:10px;color:var(--muted);transition:transform var(--dur) var(--ease)}
+.eu[aria-expanded="true"] .cv{transform:rotate(180deg)}
+.euw{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 8px);background:#fff;border:1px solid var(--hair);
+  border-radius:12px;min-width:200px;padding:5px;z-index:40;box-shadow:var(--shadow)}
+.menu button{display:block;width:100%;text-align:left;background:0;border:0;font-size:14px;
+  padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--crit-ink)}
+.menu button:hover{background:var(--crit-tint)}
+
+/* KPIs em vidro: 1 heroi + tiles. Sao TAMBEM o filtro da tabela — nao existe
+   um segundo controle repetindo os mesmos quatro recortes. */
+.kpis{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:10px;margin-top:22px}
+@media(max-width:1280px){.kpis{grid-template-columns:1fr 1fr}}
+@media(max-width:1100px){.kpis{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.kpis{grid-template-columns:1fr}}
+.tile{background:rgba(255,255,255,.80);border:1px solid rgba(255,255,255,.9);border-radius:18px;
+  padding:16px 18px;text-align:left;cursor:pointer;color:var(--ink);
+  transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease),background-color var(--dur) var(--ease)}
+.tile:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(11,18,32,.12);background:rgba(255,255,255,.92)}
+.tile:active{transform:scale(.99)}
+.tile[aria-pressed="true"]{background:#fff;border-color:var(--ink);
+  box-shadow:0 0 0 2px var(--ink), 0 10px 26px rgba(11,18,32,.14)}
+.tile .sel{display:none;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink);margin-left:auto}
+.tile[aria-pressed="true"] .sel{display:inline}
+.tile .lab{font-size:13.5px;color:var(--ink-2);margin-bottom:6px;display:flex;align-items:center;
+  min-height:16px}
+.tile .val{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
+.tile .dl{font-size:13px;color:var(--ink-2);margin-top:6px}
+.tile.hero-tile .val{font-size:clamp(46px,4.4vw,62px);letter-spacing:-.035em}
+.tile.hero-tile .lab{font-size:14.5px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;
+  box-shadow:inset 0 0 0 1.5px rgba(11,18,32,.30)}   /* borda escura: o amarelo nao some no branco */
+.dot.good{background:var(--good)} .dot.warn{background:var(--warn)}
+.dot.ser{background:var(--ser)} .dot.crit{background:var(--crit)}
+.dot.acc{background:var(--accent)} .dot.neu{background:#9aa5b1}
+.ml b{font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:5px}
+.ml .h{font-weight:700;color:var(--ink)}
+
+/* ---------- conteudo ---------- */
+main{background:var(--surface);border-radius:0 0 calc(var(--r-lg) - 6px) calc(var(--r-lg) - 6px);
+  padding:20px 22px 40px;transition:opacity var(--dur) var(--ease)}
+main.carregando{opacity:.55;pointer-events:none}
+/* fica no canto superior esquerdo, junto da marca — longe do corte */
+.status{font-size:13.5px;color:var(--ink);font-weight:600;min-height:1.1em;margin-top:2px}
+.status.falha{color:var(--crit-ink)}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+input[type=search]{background:var(--surface-2);border:1px solid var(--hair);color:var(--ink);
+  border-radius:99px;padding:10px 16px;font:inherit;font-size:14.5px;width:280px;
+  transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+input[type=search]:focus-visible{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+/* legenda: dois blocos com titulo proprio, nao uma fileira embolada */
+.leg{display:grid;grid-template-columns:auto auto 1fr;gap:14px 28px;margin:0 0 12px;
+  border:1px solid var(--hair);border-radius:var(--r);padding:13px 16px;background:var(--surface-2)}
+@media(max-width:1180px){.leg{grid-template-columns:1fr 1fr}}
+@media(max-width:860px){.leg{grid-template-columns:1fr}}
+.lg{min-width:0}
+.lg+.lg{border-left:1px solid var(--hair-2);padding-left:28px}
+@media(max-width:1180px){.lg:nth-child(3){border-left:0;padding-left:0;
+  border-top:1px solid var(--hair-2);padding-top:12px;grid-column:1/-1}}
+@media(max-width:860px){.lg+.lg{border-left:0;padding-left:0;
+  border-top:1px solid var(--hair-2);padding-top:12px}}
+.lt{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);margin-bottom:9px}
+.lt span{text-transform:none;letter-spacing:0;font-weight:400}
+.lr{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:14px;color:var(--ink-2)}
+.lr+.lr{margin-top:7px}
+.lr em{font-style:normal}
+.lr .ct2{margin-left:auto;font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+
+/* barra de explicacao (vista de categorias) */
+.info{border:1px solid var(--hair);border-radius:var(--r);padding:13px 16px;margin:0 0 12px;
+  background:var(--surface-2);font-size:14px;color:var(--ink-2);line-height:1.65}
+.info div+div{margin-top:5px}
+.info b{color:var(--ink)}
+
+/* conta limpa: a tabela de categorias nao pode ficar em branco */
+.vazio{border:1px solid var(--hair);border-radius:var(--r);background:var(--surface);
+  padding:44px 26px;text-align:center}
+.vazio .ei{width:46px;height:46px;border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;
+  background:var(--good-tint);color:var(--good-ink);font-size:22px;font-weight:700}
+.vazio .ei.ruim{background:var(--crit-tint);color:var(--crit-ink)}
+.vazio ul.falhas{display:inline-block;text-align:left;margin:12px auto 8px;padding-left:20px;
+  color:var(--crit-ink);font-size:14px;line-height:1.6;max-width:72ch}
+.vazio h2{font-size:19px;margin:0 0 7px}
+.vazio p{margin:0 auto;max-width:56ch;color:var(--ink-2);font-size:14.5px;line-height:1.65}
+
+/* legenda dos destinos: o selo DE VERDADE + o que ele quer dizer */
+/* uma so grade para as tres linhas: os selos tem larguras diferentes e os textos
+   precisam comecar todos na mesma coluna, senao a legenda fica esfarrapada */
+.defs{display:grid;grid-template-columns:auto 1fr;gap:13px 16px;align-items:start;
+  margin-top:12px;padding-top:13px;border-top:1px solid var(--hair-2)}
+.defs:first-child{margin-top:0;padding-top:0;border-top:0}
+.defs .d{display:contents}
+.defs .d>.tag{justify-self:start;margin-top:1px}
+@media(max-width:760px){.defs{grid-template-columns:1fr;gap:6px}
+  .defs .d+.d>.tag{margin-top:11px}}
+
+.box{border:1px solid var(--hair);border-radius:var(--r);overflow:auto;background:var(--surface)}  /* tabela larga rola AQUI dentro, nunca a pagina */
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+caption{text-align:left;padding:0 0 8px;font-size:13.5px;color:var(--muted)}
+th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;
+  letter-spacing:.06em;padding:12px 14px;background:var(--surface-2);white-space:nowrap;
+  position:sticky;top:0;z-index:5;border-bottom:1px solid var(--hair)}
+td{padding:11px 14px;border-top:1px solid var(--hair);vertical-align:middle}
+tr.ln{cursor:pointer;scroll-margin-top:60px;transition:background-color var(--dur) var(--ease);
+  content-visibility:auto;contain-intrinsic-size:auto 58px}  /* 409 linhas sem travar */
+tr.ln:hover td,tr.ln.ab td{background:var(--surface-2)}
+.exp{width:30px;height:30px;border-radius:50%;border:1px solid var(--hair);background:#fff;
+  color:var(--muted);font-size:13.5px;cursor:pointer;flex:none;
+  transition:transform var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.exp:hover{border-color:var(--accent);color:var(--accent-ink)}
+.exp[aria-expanded="true"]{transform:rotate(90deg);border-color:var(--accent);color:var(--accent-ink)}
+.it{display:flex;gap:10px;align-items:center;min-width:0}
+.it .tt{min-width:0}
+.thumb{width:36px;height:36px;object-fit:cover;border-radius:8px;background:var(--surface-2);flex:none;
+  border:1px solid var(--hair)}
+.it b{font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px}
+
+/* etiquetas: tom claro + tinta escura + ponto (a cor nunca vai no texto) */
+.b,.tag{display:inline-flex;align-items:center;gap:7px;border-radius:99px;white-space:nowrap;
+  font-weight:600;line-height:1}
+.b{padding:5px 10px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.tag{padding:5px 10px;font-size:12.5px}
+.tag.plain:before{display:none}   /* etiqueta informativa, nao e status: sem ponto */
+.b:before,.tag:before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.9}
+.good{background:var(--good-tint);color:var(--good-ink)}
+.warn{background:var(--warn-tint);color:var(--warn-ink)}
+.ser{background:var(--ser-tint);color:var(--ser-ink)}
+.crit{background:var(--crit-tint);color:var(--crit-ink)}
+.acc{background:var(--accent-tint);color:var(--accent-ink)}
+.neu{background:var(--neu-tint);color:var(--neu-ink)}
+.n100,.n75{background:var(--good-tint);color:var(--good-ink)}
+.n65,.n50{background:var(--ser-tint);color:var(--ser-ink)}   /* mesma faixa laranja "Media" */
+.n30{background:var(--crit-tint);color:var(--crit-ink)}
+.ncinza{background:var(--neu-tint);color:var(--neu-ink)}
+.tx{display:inline-flex;align-items:center;gap:7px;justify-content:flex-end}
+
+/* SITUACAO: chapa cheia com texto branco, em FAMILIA DE COR PROPRIA.
+   Verde/amarelo/vermelho estao reservados para a TAXA, e a nota usa as cores
+   do proprio ML — se a situacao repetisse esses tons, tres significados
+   diferentes dividiriam a mesma paleta na mesma linha.
+   Aqui: escuro = doi agora · violeta = esperando o ML · ardosia = nada a fazer.
+   Medido: separacao CVD entre as tres DeltaE 17,0 e contra a escala da taxa 17,9
+   (alvo 8). Branco sobre cada chapa: 18,7:1 · 8,6:1 · 4,8:1. */
+.st{display:inline-flex;align-items:center;border-radius:8px;padding:5px 11px;font-size:12.5px;
+  font-weight:600;white-space:nowrap;--st:var(--calma);background:var(--st);color:#fff}
+.st.forte{--st:var(--ink)}
+.st.pausa{--st:var(--pausa)}     /* parado, e repor nao pune */
+.st.punido{--st:var(--punido)}   /* parado, mas a punicao volta ao repor */
+.st.semnota{--st:var(--semnota)} /* o ML ainda nao calculou nota nenhuma */
+.st.decola{--st:var(--decola)}   /* no Decola: a punicao fica anulada */
+
+/* ---------- detalhe expandido: 3 colunas numeradas, filete no topo ---------- */
+td.det{padding:0;background:#f8fafc}
+.dg{display:grid;grid-template-columns:1fr 1.15fr 1fr;border-top:2px solid var(--ink)}
+@media(max-width:1000px){.dg{grid-template-columns:1fr}}
+.dbx{padding:16px 18px 18px;border-left:1px solid var(--hair);min-width:0;position:relative}
+.dbx:first-child{border-left:0}
+.dt{display:flex;align-items:baseline;gap:9px;font-size:12px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.dt .n{font-size:12.5px;color:var(--ink);letter-spacing:0;font-variant-numeric:tabular-nums}
+.eq2{font-size:21.5px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;margin:2px 0 6px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.eq2 b{font-weight:700}.eq2 span{color:var(--muted);font-size:14.5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ch{font-size:13px;padding:3px 9px;border-radius:99px;border:1px solid var(--hair);color:var(--ink-2);background:#fff}
+.ch.on{border-color:var(--crit);color:var(--crit-ink);background:var(--crit-tint)}
+.ch i{font-style:normal;color:var(--muted);font-size:12px;margin-left:3px}
+.pj{display:flex;gap:5px;flex-wrap:wrap;font-size:13px;font-variant-numeric:tabular-nums}
+.pj span{background:#fff;border:1px solid var(--hair);border-radius:7px;padding:3px 8px}
+.pj i{font-style:normal;color:var(--muted);margin-right:4px}
+.fala{font-size:15px;line-height:1.5;margin-bottom:8px;padding:10px 12px;border-radius:10px;
+  background:#fff;border:1px solid var(--hair)}
+.acao{margin-top:12px;font-size:14.5px;line-height:1.5;padding:10px 12px;border-radius:10px;border:1px solid}
+.acao.good{background:var(--good-tint);border-color:#bfe6bf;color:var(--ink)}
+.acao.warn{background:var(--warn-tint);border-color:#f0d58a;color:var(--ink)}
+.acao.crit{background:var(--crit-tint);border-color:#f2bcbc;color:var(--ink)}
+.acao.acc{background:var(--accent-tint);border-color:#bcd5f5;color:var(--ink)}
+.ri{font-size:14px;padding:4px 0 4px 16px;position:relative;color:var(--ink)}
+.ri:before{content:"›";position:absolute;left:3px;color:var(--accent-ink);font-weight:700}
+.rl{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:7px 0;border-top:1px solid var(--hair)}
+.rl:first-of-type{border-top:0}
+.rl b{font-weight:600} .rl .muted{font-size:12.5px;display:block}
+.lk{display:inline-block;margin-top:10px;font-size:14px;font-weight:600}
+.pode{margin-top:10px}
+
+.vazio{color:var(--muted);text-align:center;padding:36px}
+.cab{display:flex;gap:10px;align-items:baseline;margin:28px 0 10px}
+.cab h2{font-size:14.5px;margin:0;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.cab span{font-size:13.5px;color:var(--muted)}
+.ct td{vertical-align:top}
+.ct .nm{font-weight:600}
+.ct .cm{font-size:12.5px;color:var(--muted);display:block;line-height:1.45;margin:2px 0 4px}
+.gem{display:grid;gap:10px}
+.gem .g{border-left:2px solid var(--accent);padding:1px 0 1px 10px}
+.gem .g b{font-weight:600;font-size:13.5px}
+.gem .cam{display:block;font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.gem .cam .fim{color:var(--ink-2);font-weight:600}
+.ct .cm .fim{color:var(--ink-2);font-weight:600}
+/* a barra vai para a linha DE BAIXO, encostada a direita: assim o numero fica
+   debaixo do cabecalho, como manda uma coluna numerica alinhada a direita.
+   Inline, ela empurrava o valor 98px para dentro. */
+.bar3{height:5px;border-radius:99px;width:80px;overflow:hidden;display:block;margin:7px 0 0 auto}
+.bar3 i{display:block;height:100%;border-radius:0 99px 99px 0}
+.bar3.good{background:var(--good-tint)} .bar3.good i{background:var(--good)}
+.bar3.warn{background:var(--warn-tint)} .bar3.warn i{background:var(--warn)}
+.bar3.crit{background:var(--crit-tint)} .bar3.crit i{background:var(--crit)}
+.bar3.neu{background:var(--neu-tint)}
+
+/* ---------- login ---------- */
+/* guia de telas do DevCenter: abre por cima de tudo e rola sozinho */
+.gd{position:fixed;inset:0;z-index:60;background:rgba(11,18,32,.55);
+  display:grid;place-items:start center;overflow:auto;padding:0 16px 60px}
+.gd[hidden]{display:none!important}
+.gdx{background:var(--surface);border-radius:var(--r);max-width:920px;width:100%;margin:26px 0 0;
+  box-shadow:0 30px 80px rgba(11,18,32,.3)}
+.gdt{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--hair);
+  border-radius:var(--r) var(--r) 0 0;padding:18px 24px;display:flex;align-items:center;gap:14px}
+.gdt h2{font-size:20px;margin:0;letter-spacing:-.02em;flex:1;min-width:0}
+.gdt .sb{display:block;font-size:13.5px;font-weight:400;color:var(--ink-2);margin-top:3px}
+.gdf{border:1px solid var(--hair);background:#fff;width:36px;height:36px;border-radius:50%;
+  font-size:17px;color:var(--ink-2);cursor:pointer;flex:none}
+.gdf:hover{border-color:var(--accent);color:var(--accent-ink)}
+.gdc{padding:6px 24px 30px}
+/* Cada passo tem 760 a 1300px de altura por causa do print. Sem uma ancora o
+   leitor rola e perde de vista em qual passo esta — por isso o titulo GRUDA
+   embaixo do cabecalho, e cada passo comeca com um risco que separa de verdade. */
+.gp{padding:0 0 32px}
+.gp+.gp:before{content:"";display:block;height:1px;background:var(--hair);margin:0 0 4px}
+.gp .cab{position:sticky;top:92px;z-index:1;background:var(--surface);
+  margin:0 -24px;padding:15px 24px 13px;
+  display:flex;gap:13px;align-items:baseline;box-shadow:0 1px 0 var(--hair)}
+.gp .nm2{font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.08em;
+  font-variant-numeric:tabular-nums;flex:none}
+.gp h3{font-size:17.5px;margin:0 0 2px;letter-spacing:-.01em}
+.gp p{color:var(--ink-2);font-size:14.5px;line-height:1.65;margin:14px 0 0}
+.gp p b{color:var(--ink)}
+.gp code{background:var(--surface-2);padding:1px 6px;border-radius:5px;color:var(--ink);font-size:13.5px}
+.gp img{display:block;width:100%;margin:14px 0 0;border:1px solid var(--hair);border-radius:10px}
+.gp .trava{display:flex;gap:11px;margin:12px 0 0;padding:12px 14px;border-radius:10px;
+  background:var(--warn-tint);color:var(--warn-ink);font-size:14px;line-height:1.6}
+.gp .trava b{color:var(--warn-ink)}
+.gp .trava .ic2{font-weight:700;flex:none}
+.gp ul{margin:9px 0 0;padding-left:20px;color:var(--ink-2);font-size:14.5px;line-height:1.7}
+.gp ul b{color:var(--ink)}
+.gp .baixa{display:inline-block;margin-top:10px;font-size:14px;color:var(--accent-ink);font-weight:600}
+
+.setup{max-width:660px;margin:30px auto 20px}
+.setup h2{font-size:24.5px;margin:0 0 6px;letter-spacing:-.02em}
+.setup .sub2{color:var(--ink-2);font-size:15px;margin-bottom:22px;line-height:1.55}
+.passo2{background:#fff;border:1px solid var(--hair);border-radius:var(--r);padding:18px 20px;margin-bottom:12px;
+  transition:opacity var(--dur) var(--ease)}
+.passo2.off{opacity:.45;pointer-events:none}
+/* FEITO: o passo ja cumprido sai do caminho, mas continua legível e destravável
+   pelo botão "alterar" — diferente de .off, que é "ainda não chegou a vez". */
+.passo2.feito{background:var(--surface-2);border-style:dashed}
+.passo2.feito .campo,.passo2.feito .ajuda{opacity:.45;pointer-events:none}
+.passo2.feito h3,.passo2.feito .n2{opacity:.55}
+.reabrir{float:right;margin-top:-2px;background:transparent;border:0;cursor:pointer;
+  font:inherit;font-size:13px;font-weight:600;color:var(--good-ink)}
+.reabrir:hover{text-decoration:underline}
+.passo2 .n2{font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.08em;margin-right:10px;font-variant-numeric:tabular-nums}
+.passo2 h3{display:inline;font-size:17px;margin:0}
+.passo2 .ajuda{color:var(--ink-2);font-size:14.5px;line-height:1.6;margin:10px 0 0}
+.passo2 .ajuda code{background:var(--surface-2);padding:1px 6px;border-radius:5px;color:var(--ink)}
+.campo{margin:10px 0 0}
+.campo label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.campo input{width:100%;background:var(--surface-2);border:1px solid var(--hair);color:var(--ink);
+  border-radius:12px;padding:11px 14px;font:inherit;font-size:15px;
+  transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.vermais{display:block;margin-top:8px;background:transparent;border:0;padding:4px 0;
+  font:inherit;font-size:13px;font-weight:600;color:var(--accent-ink);cursor:pointer;text-align:left}
+.vermais:hover{text-decoration:underline}
+.vermais:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+.onde{display:inline-block;margin-top:6px;font-size:13px;color:var(--accent-ink);
+  font-weight:600;text-decoration:none}
+.onde:hover{text-decoration:underline}
+.onde.morto{color:var(--muted);font-weight:400;pointer-events:none}
+.dica{display:block;margin-top:3px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.dica b{color:var(--ink-2)}
+
+.campo input:focus-visible{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.erro{color:var(--crit-ink);font-size:14px;margin-top:10px}
+.okz{color:var(--good-ink);font-size:14px;margin-top:10px}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;
+    animation-iteration-count:1!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="hero">
+    <div class="top">
+      <div class="brand"><h1>Experiência de Compra</h1><div class="sub" id="sub"></div>
+        <div class="status" id="status" role="status" aria-live="polite"></div></div>
+      <div class="spacer"></div>
+      <button type="button" class="pill dark" id="bguia" data-guia hidden>Como criar seu aplicativo no DevCenter</button>
+      <button type="button" class="pill dark" id="att" hidden>Atualizar os anúncios da conta <span class="arr" aria-hidden="true">→</span></button>
+      <div class="euw" id="eu"></div>
+    </div>
+    <div id="kpis"></div>
+  </header>
+  <main id="app"><div class="vazio">Carregando…</div></main>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+let D=null, filtro='todos', busca='', aberto=null;
+// constantes da regra: vem do dados.json (fonte unica: regras.py); o fallback e so
+// para nao quebrar num dado sem o campo
+const R=()=>Object.assign({LIM_ITEM:100,LIM_CAT:200,JANELA:365,JANELA_RAPIDA:60,JANELA_ANTIGA:180,PESO:60},(D&&D.regras)||{});
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nb=v=>(v==null||v===-1)?'ncinza':'n'+v;
+const nt=v=>(v==null||v===-1)?'cinza':v;
+const pc=v=>v==null?'—':(v>0&&v<0.01?'<0,01':v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'%';
+const mil=n=>(n||0).toLocaleString('pt-BR');
+// Caminho da arvore: destaca a folha, que e onde o anuncio de fato vai parar.
+const caminho=c=>{
+  if(!c) return '';
+  const p=String(c).split(' > ');
+  const fim=p.pop();
+  return (p.length?esc(p.join(' › '))+' › ':'')+`<span class="fim">${esc(fim)}</span>`;
+};
+const DM=new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit'});
+const dm=s=>{ if(!s) return ''; const d=new Date(s+'T12:00:00'); return isNaN(d)?s:DM.format(d); };
+const reduz=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// A cor da taxa e RELATIVA a media da propria conta — nao existe numero
+// absoluto certo: 5% pode ser otimo numa categoria e pessimo em outra, porque
+// o ML divide pela media dos concorrentes, que ele nao publica.
+// Devolve o NOME do status (good/warn/crit); a cor mora no CSS.
+let MEDIA=0, C_AVISO=null;   // aviso da conta (ML sem resposta), mostrado no status
+const cs=t=>t==null?'neu':(t>=2*MEDIA&&t>0)?'crit':t>MEDIA?'warn':'good';
+const TRAD={not_working_item:'Produto não funciona',broken_item:'Produto quebrado',
+ missing_item:'Faltou o produto',missing_accessories:'Faltou acessório',empty_box:'Caixa vazia',
+ different_than_published:'Diferente do anúncio',different_color_or_size:'Cor, tamanho ou modelo errado',
+ different_item_other:'Veio outro produto',different_item_other_change:'Veio outro produto',
+ damaged_package_broken_item:'Embalagem danificada, produto quebrado',
+ damaged_package_not_working_item:'Embalagem danificada, não funciona',
+ damaged_package_missing_accessories:'Embalagem danificada, faltou peça',
+ undelivered_repentant_buyer:'Desistiu antes de receber',undelivered_other:'Não entregue',
+ delivered_but_not_receive_package:'Diz que não recebeu',out_of_stock:'Você ficou sem estoque',
+ estimated_delivery_out_of_time:'Demorou demais para entregar',
+ delivery_date_was_not_met:'Prazo de entrega não cumprido',
+ change_receiver_address:'Endereço errado',unauthorized_purchase:'Compra não autorizada',
+ shipment_problem_other:'Problema no envio',unprinted_label:'Etiqueta não imprimiu',
+ unavailable_product_other:'Produto indisponível',repentant_buyer:'Arrependimento'};
+
+function info(i){
+  const c=D.categorias.find(x=>x.id===i.categoria)||{};
+  const jan=i.janela||365;
+  // as reclamacoes que estao DENTRO da base desta nota (60, 180 ou 365 dias)
+  const rec=(D.reclamacoes||[]).filter(x=> i.ramo==='HERDA'
+      ? (x.categoria===i.categoria && x.dias<=jan)
+      : (i.ramo==='ITEM'||i.ramo==='ANTIGO') ? (x.item===i.id && x.dias<=jan) : false)
+    .map(x=>({...x, sai: jan-x.dias}))
+    .sort((a,b)=>a.sai-b.sai);
+  // as do PROPRIO anuncio no ano: sao elas que derrubam so ele (medido: 98% dos
+  // pares na mesma categoria), e pesam forte por `peso` dias
+  const peso=R().PESO;
+  const minhas=(D.reclamacoes||[]).filter(x=>x.item===i.id && x.dias<=R().JANELA).sort((a,b)=>a.dias-b.dias);
+  const pesam=minhas.filter(x=>x.dias<=peso).length;
+  const base = i.ramo==='ITEM' ? {qual:'o próprio anúncio', jan:jan+' dias'}
+             : i.ramo==='HERDA'? {qual:'a categoria '+(i.cat_nome||''), jan:R().JANELA+' dias'}
+             : i.ramo==='ANTIGO'? {qual:'o cálculo antigo', jan:R().JANELA_ANTIGA+' dias'}
+             : {qual:null, jan:null};
+  base.v=i.base_vendas; base.t=i.taxa;
+  return {c:c, rec:rec, base:base, minhas:minhas, pesam:pesam, peso:peso};
+}
+
+// A SITUACAO VEM PRONTA DO COLETOR (regras.py) — a tela nao classifica nada.
+// A legenda e a lista FIXA de casos, sempre inteira, com a contagem do recorte:
+// identica em qualquer conta, e um caso com zero continua sendo verdade.
+function situacaoDe(i){ return i.situacao || ['','ok']; }
+function situacao(i){
+  const [cls,txt]=situacaoDe(i);
+  return `<span class="st ${cls}">${esc(txt)}</span>`;
+}
+function legendaSituacao(l){
+  const n=new Map();
+  l.forEach(function(i){ const t=situacaoDe(i)[1]; n.set(t,(n.get(t)||0)+1); });
+  return (D.casos||[]).map(function(c){
+    return `<div class="lr"><span class="st ${c[0]}">${esc(c[1])}</span>`
+      +`<em>${esc(c[2])}</em><i class="ct2">${mil(n.get(c[1])||0)}</i></div>`; }).join('');
+}
+
+function linha(i){
+  const ab = aberto===i.id;
+  return `<tr class="ln ${ab?'ab':''}" data-id="${i.id}">
+    <td><div class="it">
+      <button type="button" class="exp" aria-expanded="${ab}" aria-controls="det-${i.id}"
+        aria-label="${ab?'Fechar':'Abrir'} detalhes de ${esc(i.titulo)}">▸</button>
+      ${i.thumb?`<img class="thumb" src="${esc(i.thumb)}" width="36" height="36" alt="" loading="lazy">`:'<div class="thumb"></div>'}
+      <div class="tt"><b title="${esc(i.titulo)}">${esc(i.titulo)}</b>
+      <code translate="no">${i.id}</code> · <code>${esc(i.cat_nome)}</code></div></div></td>
+    <td><span class="b ${nb(i.nota)}">${nt(i.nota)}</span></td>
+    <td>${i.ramo==='ITEM'?'<span class="tag neu plain">o anúncio</span>'
+        :i.ramo==='HERDA'?'<span class="tag acc plain">a categoria</span>'
+        :i.ramo==='ANTIGO'?'<span class="tag neu plain">cálculo antigo</span>':'<span class="tag neu plain">nenhuma</span>'}</td>
+    <td class="num">${mil(i.v365)}</td>
+    <td class="num muted">${mil(i.v60)}</td>
+    <td class="num">${i.reclamacoes||'<span class="muted">0</span>'}</td>
+    <td class="num"><span class="tx">${i.taxa==null?'':`<i class="dot ${cs(i.taxa)}" aria-hidden="true"></i>`}${pc(i.taxa)}</span></td>
+    <td>${situacao(i)}</td></tr>
+    ${ab?`<tr id="det-${i.id}"><td class="det" colspan="8">${detalhe(i)}</td></tr>`:''}`;
+}
+
+// Quanto tempo sem vender, SEM mentir sobre a idade: a janela de pedidos e de
+// 365 dias, entao "ha mais de um ano" so vale para anuncio com mais de um ano.
+function semVenda(i, peso){
+  if(i.dias_sem_venda!=null) return i.dias_sem_venda>peso ? `não vende há ${i.dias_sem_venda} dias` : null;
+  if(i.idade!=null && i.idade<R().JANELA) return `nunca vendeu desde que foi criado, há ${i.idade} dias`;
+  if(i.idade==null) return `não vende há pelo menos ${R().JANELA} dias`;
+  return 'não vende há mais de um ano';
+}
+// UMA frase dizendo o que esta segurando a nota — e o que muda isso.
+function acao(i,o){
+  const minhas=o.minhas, pesam=o.pesam, peso=o.peso;
+  const parada = semVenda(i, peso);
+  const soVendendo = parada ? ` Este anúncio <b>${parada}</b> — o Mercado Livre só refaz a nota quando ele vender.` : '';
+  const pl=n=>n>1?'reclamações':'reclamação';
+  if(i.freeze) return ['good','Programa Decola: a nota continua, mas a punição está anulada enquanto o programa durar.'];
+  if(i.nota==null||i.nota===-1){
+    if(i.ramo==='ANTIGO') return ['good',`Cinza no cálculo antigo: sem vendas nos últimos ${R().JANELA_ANTIGA} dias. Cinza não tira exposição.`];
+    if(i.sem_nota) return ['acc',`Pela regra este anúncio já teria nota (${i.ramo==='ITEM'?`passou de ${R().LIM_ITEM} vendas`:`a categoria passou de ${R().LIM_CAT}`}) — o Mercado Livre ainda não calculou. Enquanto está cinza <b>não perde exposição</b>.`];
+    return ['good',`Sem nota porque a categoria ainda não chegou a ${R().LIM_CAT} vendas no ano — e sem nota o Mercado Livre não tira exposição.`];
+  }
+  const daBase = i.ramo==='HERDA'
+    ? `a categoria: <b>${i.reclamacoes}</b> ${pl(i.reclamacoes)} em <b>${mil(i.base_vendas)}</b> vendas suas lá`
+    : i.base_vendas
+    ? `o histórico do próprio anúncio: <b>${i.reclamacoes}</b> ${pl(i.reclamacoes)} em <b>${mil(i.base_vendas)}</b> vendas`
+    : `algo que o painel não consegue conferir — o anúncio não chegou a ${R().LIM_ITEM} vendas e a categoria não chegou a ${R().LIM_CAT} no ano; vale o texto do Mercado Livre acima`;
+  if(i.ruim){
+    if(pesam) return ['crit',`<b>${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}</b> — reclamação pesa forte por ${peso} dias e depois vai perdendo peso. A mais nova deixa de pesar em <b>${peso-minhas[0].dias} dias</b>.${soVendendo}`];
+    if(minhas.length) return ['warn',`${minhas.length===1?'A única reclamação deste anúncio já passou':`As ${minhas.length} reclamações deste anúncio já passaram`} de ${peso} dias e pesa${minhas.length===1?'':'m'} pouco. O que segura a nota é ${daBase}.${soVendendo}`];
+    return ['warn',`Nenhuma reclamação neste anúncio no ano. O que segura a nota é ${daBase}.${soVendendo}`];
+  }
+  if(i.nota===75){
+    if(pesam) return ['warn',`75 não tira exposição, mas ${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}. Sem reclamação nova, tende a voltar a 100 depois de ${peso} dias${parada?' — quando vender':''}.`];
+    return ['good',`75 não tira exposição.${minhas.length?(minhas.length===1?` A reclamação deste anúncio já passou de ${peso} dias.`:` As reclamações deste anúncio já passaram de ${peso} dias.`):''}${soVendendo}`];
+  }
+  return ['good', minhas.length?`Nota 100. ${minhas.length} ${pl(minhas.length)} no ano não derrubaram a nota.`:'Nota 100, nenhuma reclamação neste anúncio no ano.'];
+}
+
+function detalhe(i){
+  const o=info(i), c=o.c, rec=o.rec, base=o.base, minhas=o.minhas, pesam=o.pesam, peso=o.peso;
+  let n=rec.length;
+  const proj=rec.map(r=>{n--;return {d:r.sai,t:base.v?100*n/base.v:null}});
+  const g=(i.ramo==='HERDA'?i.grupos_cat:i.grupos)||{};
+  const fora=(g.ARREPENDIMENTO||0)+(g.ENTREGA||0);
+  const A=acao(i,o);
+  const ondeTxt = i.ramo==='ITEM'&&i.janela===R().JANELA_RAPIDA
+      ? `deste anúncio — vendeu ${mil(i.v60)} em ${R().JANELA_RAPIDA} dias, passou de ${R().LIM_ITEM} (o atalho dos ${R().JANELA_RAPIDA} dias)`
+      : i.ramo==='ITEM'
+      ? `deste anúncio — vendeu ${mil(i.v365)} no ano, passou de ${R().LIM_ITEM}`
+      : i.ramo==='HERDA'
+      ? `da categoria <b>${esc(c.nome||'')}</b> — ela vendeu ${mil(c.vendas365)} no ano e este anúncio só ${mil(i.v365)}`
+      : i.ramo==='ANTIGO'
+      ? `do <b>cálculo antigo</b> — o Mercado Livre ainda não migrou este anúncio e conta os últimos ${R().JANELA_ANTIGA} dias dele`
+      : `nenhuma — o anúncio não chegou a ${R().LIM_ITEM} vendas e a categoria não chegou a ${R().LIM_CAT}`;
+  const ml=i.ml||{};
+  const parada = semVenda(i, peso);
+  return `<div class="dg" role="region" aria-label="Detalhes de ${esc(i.titulo)}">
+    <div class="dbx">
+      <div class="dt"><span class="n">.01</span>A conta</div>
+      ${base.v?`<div class="eq2"><b>${i.reclamacoes}</b><span>reclam. de produto ÷</span>
+        <b>${mil(base.v)}</b><span>vendas =</span>
+        <span class="tx"><i class="dot ${cs(base.t)}" aria-hidden="true"></i><b>${pc(base.t)}</b></span></div>`
+       :`<div class="eq2 muted">sem vendas na base</div>`}
+      <div class="muted sm">Base ${ondeTxt}. Janela de ${i.janela||R().JANELA} dias.</div>
+      ${(ml.vendas!=null||ml.reclamacoes!=null)?`<div class="muted sm">O Mercado Livre contou: <b>${ml.vendas==null?'?':ml.vendas}</b> vendas e <b>${ml.problemas!=null?ml.problemas:(ml.reclamacoes==null?'?':ml.reclamacoes)}</b> problemas${ml.de?` (${dm(ml.de)} a ${dm(ml.ate)})`:''}.</div>`:''}
+      <div class="chips">
+        <span class="ch ${pesam?'on':''}">${minhas.length} neste anúncio no ano${pesam?`<i>${pesam} ainda pesa${pesam>1?'m':''}</i>`:''}</span>
+        ${fora?`<span class="ch">${fora} não contam <i>arrependimento / entrega</i></span>`:''}
+        ${parada?`<span class="ch">${parada}</span>`:''}
+      </div>
+      ${proj.length?`<div class="dt" style="margin-top:14px"><span class="n">↓</span>Como cai sozinha</div>
+        <div class="pj">${proj.slice(0,5).map(x=>`<span><i>${x.d}d</i>${pc(x.t)}</span>`).join('')}</div>`:''}
+      ${i.pode_mover?'<div class="pode"><span class="tag acc">0 vendas: a categoria ainda pode ser trocada</span></div>':''}
+      ${i.freeze?'<div class="pode"><span class="tag good">Programa Decola — punição anulada</span></div>':''}
+    </div>
+    <div class="dbx">
+      <div class="dt"><span class="n">.02</span>Por que essa nota</div>
+      ${(i.motivo||[]).length
+        ? i.motivo.map(t=>`<div class="fala">${esc(t)}</div>`).join('')
+        : '<div class="muted sm">O Mercado Livre não escreveu nada para este anúncio.</div>'}
+      <div class="acao ${A[0]}">${A[1]}</div>
+      ${(i.recomendacoes||[]).length?`<div class="dt" style="margin-top:14px"><span class="n">★</span>O ML recomenda</div>
+        ${i.recomendacoes.slice(0,3).map(t=>`<div class="ri">${esc(t)}</div>`).join('')}`:''}
+      ${i.up_id?`<a class="lk" target="_blank" rel="noopener"
+        href="https://vendedores.mercadolivre.com.br/metricas/${esc(i.up_id)}/experiencia-compra"
+        >Abrir no Mercado Livre ↗</a>`:''}
+    </div>
+    <div class="dbx">
+      ${(()=>{
+        // sem base (ramo SEM) a lista e a das reclamacoes do PROPRIO anuncio no ano:
+        // e o que derruba ele mesmo sem categoria
+        const lst = rec.length ? rec : minhas.map(x=>({...x, sai:R().JANELA-x.dias}));
+        const tit = rec.length ? `As ${rec.length} reclamações na base` : minhas.length ? `As ${minhas.length} reclamações deste anúncio no ano` : 'Reclamações';
+        return `<div class="dt"><span class="n">.03</span>${tit}</div>
+      ${lst.length?lst.map((r,k)=>`<div class="rl${k>=7?' extra':''}"${k>=7?' hidden':''}>
+        <div><b>${esc(TRAD[r.nome]||r.nome||'')}</b>
+          <span class="muted">${dm(r.data)}${r.item&&r.item!==i.id?' · outro anúncio':' · este anúncio'}</span></div>
+        <div class="num muted">${r.item===i.id?(r.pesa?'<b>pesa agora</b>':'pesa pouco')+' · ':''}sai em ${r.sai}d</div></div>`).join('')
+        +(lst.length>7?`<button type="button" class="vermais" data-ver="${i.id}"
+             aria-expanded="false">+ ${lst.length-7} mais</button>`:'')
+       :'<div class="muted sm">Nenhuma na base desta nota.</div>'}`; })()}
+    </div>
+  </div>`;
+}
+
+function cartaoConta(C){
+  const eu=$('#eu'); if(!eu) return;
+  if(!C||!C.ligado){ eu.innerHTML=''; return; }
+  const ini=(C.nick||'?').slice(0,2).toUpperCase();
+  eu.innerHTML=`<button type="button" class="pill light eu" id="euc" aria-haspopup="menu" aria-expanded="false">
+    ${C.foto?`<img src="${esc(C.foto)}" width="34" height="34" alt="">`:`<span class="ini" aria-hidden="true">${esc(ini)}</span>`}
+    <span class="qn"><b>${esc(C.nick||'')}</b><span>${esc((C.nome||'').slice(0,26))}</span></span>
+    <i class="cv" aria-hidden="true">▾</i>
+  </button>`;
+  const cx=eu.querySelector('#euc');
+  const fecha=()=>{const m=eu.querySelector('.menu'); if(m) m.remove(); cx.setAttribute('aria-expanded','false');};
+  cx.onclick=e=>{
+    e.stopPropagation();
+    if(eu.querySelector('.menu')){ fecha(); return; }
+    cx.setAttribute('aria-expanded','true');
+    const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu');
+    m.innerHTML=`<button type="button" role="menuitem" id="bsair">Desconectar esta conta</button>`;
+    eu.appendChild(m);
+    m.onclick=e=>e.stopPropagation();
+    const b=m.querySelector('#bsair'); b.focus();
+    b.onclick=async()=>{
+      if(!confirm('Desconectar '+(C.nick||'')+'?\n\nO painel volta do zero.')) return;
+      await fetch('/api/sair',{method:'POST',headers:{'Content-Type':'application/json'},
+                               body:JSON.stringify({tudo:true})});
+      carrega(false);
+    };
+  };
+  eu._fecha=fecha;
+}
+document.addEventListener('click',()=>{const eu=$('#eu'); if(eu&&eu._fecha) eu._fecha();});
+
+function pinta(){
+  const it=D.itens;
+  const pun=it.filter(x=>x.pune), dor=it.filter(x=>x.dormente);
+  const tx=D.vendas365?100*D.total_conta/D.vendas365:0;
+  MEDIA=tx;
+  $('#sub').innerHTML=`<b>${esc(D.conta.nick)}</b> · ${mil(it.length)} anúncios · ${esc(D.quando)}${D.pacote?` · painel v${esc(D.pacote)}`:''}`;
+  if(C_AVISO){ const st=$('#status'); if(st&&!st.textContent){ st.textContent='⚠ '+C_AVISO; st.classList.add('falha'); } }
+  const sn=it.filter(x=>x.sem_nota);
+  // A tabela de categorias so mostra o que doi: categoria que ja esta dando 30 ou 65
+  // em algum anuncio seu. Categoria limpa nao tem nada a decidir e so faria volume.
+  const todasCats=D.categorias.filter(c=>c.n_anuncios>0);
+  const cats=todasCats.filter(afetada);
+  const comGemea=cats.filter(c=>(c.gemeas||[]).some(g=>!g.mesma_familia&&destino(g).serve)).length;  // mesmo criterio da coluna
+  const vistaCat = filtro==='categorias';
+  // Sem bolinha aqui: o ponto colorido e o vocabulario da TAXA (legenda + coluna).
+  // Repetido nos cards, sugeriria uma escala que eles nao tem.
+  const tile=(f,rot,val,pe)=>`<button type="button" class="tile${f==='punidos'?' hero-tile':''}"
+      data-f="${f}" aria-pressed="${filtro===f}">
+    <div class="lab">${rot}<span class="sel">na tabela ↓</span></div>
+    <div class="val">${val}</div><div class="dl">${pe}</div></button>`;
+  $('#kpis').innerHTML=`<div class="kpis">
+    ${tile('punidos','Perdendo exposição',pun.length+dor.length,
+           `${pun.length} no ar · ${dor.length} sem estoque`)}
+    ${tile('semnota','Sem nota ainda',sn.length,
+           'a regra já daria nota, o ML não calculou')}
+    ${tile('todos','Taxa geral',pc(tx),
+           `reclamações ÷ vendas · ver todos os ${mil(it.length)}`)}
+    ${tile('categorias','Categorias afetadas',cats.length,
+           `${comGemea} com destino melhor · de ${mil(todasCats.length)} em que você vende`)}
+  </div>`;
+
+  $('#app').innerHTML = vistaCat ? vistaCategorias(cats) : `
+  <div class="tools">
+    <label class="sr" for="q">Buscar anúncio</label>
+    <input type="search" id="q" name="q" autocomplete="off" spellcheck="false"
+      placeholder="Buscar título, MLB ou categoria…" value="${esc(busca)}">
+  </div>
+  <div class="leg">
+    <div class="lg">
+      <div class="lt">Taxa <span>— comparada à sua média de ${pc(tx)}</span></div>
+      <div class="lr"><i class="dot good" aria-hidden="true"></i><em>abaixo</em></div>
+      <div class="lr"><i class="dot warn" aria-hidden="true"></i><em>acima</em></div>
+      <div class="lr"><i class="dot crit" aria-hidden="true"></i><em>o dobro ou mais</em></div>
+    </div>
+    <div class="lg">
+      <div class="lt">Nota</div>
+      <div class="lr"><span class="b n30">30</span><span class="b n65">50 · 65</span><em>tiram exposição</em></div>
+      <div class="lr"><span class="b n75">75</span><span class="b n100">100</span><em>não tiram</em></div>
+      <div class="lr"><span class="b ncinza">cinza</span><em>sem nota, sem punição</em></div>
+    </div>
+    <div class="lg">
+      <div class="lt">Situação <span>— os ${(D.casos||[]).length} casos, com a contagem do recorte</span></div>
+      ${legendaSituacao(it.filter(x=>filtro==='punidos'?x.ruim:filtro==='semnota'?x.sem_nota:true))}
+    </div>
+  </div>
+  <div class="box"><table aria-label="Anúncios"><thead><tr>
+    <th scope="col">Anúncio</th><th scope="col">Nota</th><th scope="col">Base</th>
+    <th scope="col" class="num">Vendas 365d</th><th scope="col" class="num">60d</th>
+    <th scope="col" class="num">Reclam. na base</th><th scope="col" class="num">Taxa da base</th>
+    <th scope="col">Situação</th>
+  </tr></thead><tbody id="tb"></tbody></table></div>`;
+
+  document.querySelectorAll('[data-f]').forEach(function(e){e.onclick=function(){
+    filtro=e.dataset.f; pinta();
+    window.scrollTo({top:0,behavior:reduz?'auto':'smooth'});
+  }});
+  if(!vistaCat){ $('#q').oninput=function(e){busca=e.target.value;tabela()}; tabela(); }
+}
+
+// Uma gemea SERVE de destino se responde bem as duas perguntas:
+//   1. tem experiencia de compra ruim la?  -> nota 30 ou 65 em qualquer anuncio seu
+//   2. o ML vai remanejar o anuncio de la? -> mesmo dominio ja garante. (Medido na
+//      conta de referencia: 1 remanejo em 369 anuncios num ano, e esse trocou de
+//      dominio; nenhum anuncio dentro do dominio certo foi mexido.)
+// Tres formas de servir: contador ZERADO, contador BAIXO (as duas ainda nao
+// chegaram nas 200 do ano, entao a categoria nao manda nota — fica cinza) ou
+// nota BOA JA COMPROVADA (passou das 200, manda nota, e a nota que manda e 75/100).
+// Categoria AFETADA = ja esta dando nota que tira exposicao (30 ou 65) em pelo
+// menos um anuncio seu. E o unico caso em que ha decisao a tomar.
+const afetada=c=>Object.entries(c.notas||{}).some(([k,n])=>(k==='30'||k==='50'||k==='65')&&n>0);
+
+function destino(x){
+  const alvo=D.categorias.find(y=>y.id===x.id);
+  const notas=Object.entries((alvo&&alvo.notas)||{})
+    .filter(([k])=>k!=='null'&&k!=='-1');
+  const ruins=notas.filter(([k])=>k==='30'||k==='50'||k==='65').reduce((a,[,n])=>a+n,0);
+  if(ruins)
+    return {...x, serve:false};                 // ja pune la: nunca e saida
+  if(!x.vendas365)
+    return {...x, serve:true, classe:'livre', selo:'contador zerado'};
+  if(!x.acima_limiar)                           // vende la, mas longe das 200: ainda nao da nota
+    return {...x, serve:true, classe:'livre', selo:`contador baixo · ${mil(x.vendas365)} de ${R().LIM_CAT}`};
+  if(!notas.length)
+    return {...x, serve:false};                 // passou das 200 e nao sei a nota: nao arrisco
+  // ⚠️ o contador do map NAO pode se chamar `v`: ja atropelou a nota uma vez.
+  return {...x, serve:true, classe:'boa', selo:'nota boa comprovada',
+          resumo:notas.sort((a,b)=>b[0]-a[0]).map(([k,n])=>k+'×'+n).join(' ')};
+}
+
+// A tabela de categorias troca de lugar com a de anuncios — nao mora mais
+// no fim da pagina.
+function vistaCategorias(cats){
+  if(!cats.length) return `
+  <div class="vazio">
+    <div class="ei" aria-hidden="true">✓</div>
+    <h2>Nenhuma categoria sua está punindo</h2>
+    <p>Esta lista só mostra categoria que já está dando nota <b>30 ou 65</b> em algum anúncio seu.
+      Hoje não há nenhuma. Se uma passar a dar, ela entra aqui sozinha.</p>
+  </div>`;
+  return `
+  <div class="info">
+    <div>Gêmea da <b>mesma família</b> (o grupo logo acima da categoria) não entra na lista:
+      pelo que medimos, ela herda a mesma nota. Só aparecem gêmeas de outra família, no mesmo domínio.</div>
+    <div class="defs">
+      <div class="d"><span class="tag neu plain">contador zerado</span>
+        <span><b>Você nunca vendeu nessa categoria.</b> Ela não tem contador nenhum, então não
+          manda nota: o anúncio cai em <i>sem experiência</i> e fica cinza. Cinza não tira
+          exposição — é o mesmo lugar de quem está começando.</span></div>
+      <div class="d"><span class="tag neu plain">contador baixo · X de ${R().LIM_CAT}</span>
+        <span><b>Você já vende lá, mas ainda não chegou nas ${R().LIM_CAT} do ano.</b> Também não manda nota,
+          e por isso tem a mesma cor da de cima: as duas levam o anúncio para o cinza. A diferença
+          é que este contador está subindo — quando passar das ${R().LIM_CAT}, a nota que ela der passa a
+          valer, e aí é o histórico que você fez lá que decide.</span></div>
+      <div class="d"><span class="tag good plain">nota boa comprovada</span>
+        <span><b>Já passou das ${R().LIM_CAT}, já manda nota, e todas as notas que ela está dando nos seus
+          anúncios são 75 ou 100.</b> Verde porque é o destino mais firme dos três: aqui você não
+          está apostando no cinza, está indo para uma nota que já viu funcionar na sua conta. A
+          linha embaixo do selo mostra quantas vendas você tem lá e quais notas são essas.</span></div>
+    </div>
+  </div>
+  <div class="box"><table class="ct" aria-label="Categorias"><thead><tr>
+    <th scope="col">Categoria</th><th scope="col" class="num">Vendas 365d</th><th scope="col" class="num">Reclam.</th>
+    <th scope="col" class="num">Taxa</th><th scope="col" class="num">Anúncios</th><th scope="col">Notas que está dando</th>
+    <th scope="col">Para onde dá para mover</th>
+  </tr></thead><tbody>
+  ${cats.map(c=>`<tr>
+    <td><span class="nm">${esc(c.nome||c.id)}</span>
+      <span class="cm" title="${esc(c.caminho||'')}">${caminho(c.caminho)}</span>
+      <code translate="no">${c.id}</code>
+      ${c.acima_limiar?'<span class="tag acc plain">dá a nota</span>':`<span class="tag neu plain">abaixo de ${R().LIM_CAT}</span>`}
+      ${c.papel==='espelho'?`<span class="tag neu plain" title="o Mercado Livre marca esta categoria como espelho de ${esc(c.mestre||'')}">espelho de ${esc(c.mestre||'')}</span>`
+       :c.papel==='mestre'?'<span class="tag neu plain">tem espelho</span>':''}</td>
+    <td class="num">${mil(c.vendas365)}<br><span class="muted" style="font-size:12px">${mil(c.vendas60)} em 60d</span></td>
+    <td class="num">${c.reclamacoes||'<span class="muted">0</span>'}
+      ${(()=>{const g=c.grupos||{},o=(g.ARREPENDIMENTO||0)+(g.ENTREGA||0);
+        return o?`<br><span class="muted" style="font-size:12px">+${o} não contam</span>`:''})()}</td>
+    <td class="num"><span class="tx">${c.taxa==null?'':`<i class="dot ${cs(c.taxa)}" aria-hidden="true"></i>`}${pc(c.taxa)}</span>
+      <div class="bar3 ${cs(c.taxa)}" title="${pc(c.taxa)} — barra em relação a 3× a sua média"><i style="width:${Math.min(100,(c.taxa||0)/(3*MEDIA||8)*100)}%"></i></div></td>
+    <td class="num">${c.n_anuncios}</td>
+    <td>${Object.entries(c.notas||{}).map(e=>{const x=e[0]==='null'?-1:+e[0];
+      return `<span class="b ${nb(x)}" style="margin:1px 3px 1px 0">${nt(x)}<span class="muted" style="font-weight:400">×${e[1]}</span></span>`}).join('')||'<span class="muted">—</span>'}</td>
+    <td>${(()=>{
+      const ok=(c.gemeas||[]).filter(g=>!g.mesma_familia).map(destino).filter(x=>x.serve);
+      if(!ok.length) return '<span class="muted">nenhuma serve</span>';
+      return `<div class="gem">${ok.map(x=>`<div class="g">
+        <b>${esc(x.nome||x.id)}</b> <code translate="no">${x.id}</code>
+        <span class="tag ${x.classe==='livre'?'neu':'good'} plain"
+          style="font-size:11px;padding:2px 8px">${x.selo}</span>
+        ${x.papel==='espelho_meu'?'<span class="tag neu plain" style="font-size:11px;padding:2px 8px">espelho desta</span>'
+         :x.papel==='minha_mestre'?'<span class="tag neu plain" style="font-size:11px;padding:2px 8px">a mestre desta</span>'
+         :''}
+        <span class="cam" title="${esc(x.caminho||'')}">${caminho(x.caminho)}</span>
+        ${x.classe==='boa'?`<span class="cam">${mil(x.vendas365)} vendas suas lá · taxa ${pc(x.taxa)} · notas ${x.resumo}</span>`:''}
+        </div>`).join('')}</div>`;
+    })()}</td>
+  </tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+function tabela(){
+  const q=busca.trim().toLowerCase();
+  let l=D.itens.filter(function(i){
+    if(filtro==='punidos'&&!i.ruim) return false;
+    if(filtro==='semnota'&&!i.sem_nota) return false;
+    if(q&&!((i.titulo||'').toLowerCase().includes(q)||i.id.toLowerCase().includes(q)
+       ||(i.cat_nome||'').toLowerCase().includes(q))) return false;
+    return true});
+  l.sort(function(a,b){return (b.pune-a.pune)||(b.dormente-a.dormente)
+    ||((a.nota==null?999:a.nota)-(b.nota==null?999:b.nota))||(b.v365-a.v365)});
+  // sem teto: a lista mostra TODOS os anuncios do recorte. O custo de render
+  // fica sob controle por `content-visibility:auto` nas linhas (ver CSS), que
+  // pula o layout das que estao fora da tela sem precisar de biblioteca.
+  $('#tb').innerHTML=l.map(linha).join('')
+    ||('<tr><td colspan="8" class="vazio">'+(D.itens.length?'Nada encontrado com esse filtro.':'Esta conta não tem nenhum anúncio.')+'</td></tr>');
+  const alterna=(id,foco)=>{
+    aberto = aberto===id ? null : id; tabela();
+    if(foco){ const b=document.querySelector(`tr.ln[data-id="${id}"] .exp`); if(b) b.focus(); }
+  };
+  document.querySelectorAll('tr.ln').forEach(function(tr){
+    tr.onclick=function(e){ if(e.target.closest('a,button')) return; alterna(tr.dataset.id,false); };
+    tr.querySelector('.exp').onclick=function(e){ e.stopPropagation(); alterna(tr.dataset.id,true); };
+  });
+}
+
+
+// ---------- guia de telas do DevCenter ----------
+// Os prints sao reais, tirados no proprio DevCenter, com os dados da conta
+// substituidos ANTES da captura. As "travas" sao erros que barram de verdade —
+// cada uma me parou na primeira tentativa.
+const PASSOS = [
+ {n:'.01', t:'Entre no Mercado Livre Desenvolvedores', img:'01-login.png',
+  p:'Abra <code>developers.mercadolivre.com.br/devcenter</code> e entre com <b>a mesma conta que vende</b>. O aplicativo tem que nascer na conta cujos an\u00fancios voc\u00ea quer ler.'},
+
+ {n:'.02', t:'Clique em Criar nova aplica\u00e7\u00e3o', img:'02-minhas-aplicacoes.png',
+  p:'\u00c9 o bot\u00e3o azul no canto direito. Se voc\u00ea nunca criou nenhuma, a lista vem vazia \u2014 \u00e9 normal.'},
+
+ {n:'.03', t:'Informa\u00e7\u00f5es b\u00e1sicas', img:'03-informacoes-basicas.png',
+  p:'<b>Nome:</b> o que voc\u00ea quiser. <b>Descri\u00e7\u00e3o:</b> uma frase. <b>Prop\u00f3sito:</b> Neg\u00f3cios. <b>Usu\u00e1rios:</b> 1 a 10.',
+  lista:['<b>Nome curto</b> \u2014 s\u00f3 letras e n\u00fameros, tudo junto.',
+         '<b>Logotipo</b> \u2014 qualquer PNG de at\u00e9 1 MB.'],
+  trava:'<b>Duas armadilhas aqui.</b> O <b>Nome curto</b> diz que aceita sublinhado e <b>n\u00e3o aceita</b>: <code>painel_experiencia</code> falha, <code>painelexperiencia</code> passa. E o <b>Logotipo \u00e9 obrigat\u00f3rio</b>, mesmo sem asterisco \u2014 sem imagem o bot\u00e3o Continuar n\u00e3o avan\u00e7a.',
+  baixa:'N\u00e3o tem logo? Baixe este e use'},
+
+ {n:'.04', t:'URI de redirect e Fluxos OAuth', img:'04-redirect-e-fluxos.png',
+  p:'Em <b>URIs de redirect</b> use <code>https://httpbin.org/get</code>. \u00c9 para l\u00e1 que o Mercado Livre devolve o seu c\u00f3digo, e essa p\u00e1gina mostra o c\u00f3digo na tela \u2014 voc\u00ea n\u00e3o precisa ter site nenhum.',
+  lista:['Marque <b>Authorization Code</b>, <b>Refresh Token</b> e <b>Client Credentials</b>.',
+         'Deixe <b>PKCE</b> desmarcado.'],
+  trava:'<b>Refresh Token vem DESMARCADO.</b> Se esquecer dele, o acesso morre em 6 horas e voc\u00ea tem que reconectar toda vez. E o endere\u00e7o precisa ser <b>https</b> com dom\u00ednio de verdade: <code>http://localhost</code> e at\u00e9 <code>https://localhost</code> s\u00e3o recusados.'},
+
+ {n:'.05', t:'Neg\u00f3cios e Permiss\u00f5es', img:'05-permissoes.png',
+  p:'Marque <b>Mercado Livre</b> em Neg\u00f3cios. S\u00f3 depois disso os seletores de permiss\u00e3o destravam.'},
+
+ {n:'.06', t:'As cinco permiss\u00f5es que o painel precisa', img:'06-permissoes-fim.png',
+  p:'Deixe exatamente assim. Tudo o que <b>voc\u00ea escolhe</b> fica em <b>Leitura</b> \u2014 o painel nunca grava nada na sua conta:',
+  lista:['<b>Usu\u00e1rios</b> \u2014 o Mercado Livre <b>obriga</b> "Leitura e escrita" e deixa o seletor desabilitado. \u00c9 a \u00fanica com direito de escrita, e vem assim em qualquer aplicativo',
+         '<b>Publica\u00e7\u00e3o e sincroniza\u00e7\u00e3o</b> \u2014 Leitura \u00b7 l\u00ea a lista de an\u00fancios',
+         '<b>M\u00e9tricas do neg\u00f3cio</b> \u2014 Leitura \u00b7 l\u00ea <b>a nota</b> de experi\u00eancia',
+         '<b>Venda e envios de um produto</b> \u2014 Leitura \u00b7 l\u00ea pedidos e envios',
+         '<b>Comunica\u00e7\u00f5es pr\u00e9 e p\u00f3s-vendas</b> \u2014 Leitura \u00b7 l\u00ea <b>as reclama\u00e7\u00f5es</b>',
+         'Todo o resto: <b>Sem acesso</b>'],
+  trava2:'<b>Sobre a \u00fanica escrita.</b> A permiss\u00e3o <b>Usu\u00e1rios</b> chega com direito de escrita porque o Mercado Livre n\u00e3o deixa baixar. O painel <b>nunca usa</b>: todas as chamadas dele s\u00e3o de leitura. Mas o direito existe no aplicativo \u2014 e aplicativo com chave vazada pode ser usado por outra pessoa. Guarde a chave secreta como guarda a senha.',
+  trava:'<b>A quinta engana pelo nome.</b> "Comunica\u00e7\u00f5es pr\u00e9 e p\u00f3s-vendas" parece ser sobre mensagens com o comprador, mas \u00e9 ela que libera as <b>reclama\u00e7\u00f5es</b>. Sem ela o painel toma <b>403</b> e fica sem a base inteira da m\u00e9trica. Testamos as dez rotas uma a uma: com essas cinco, passam todas.'},
+
+ {n:'.07', t:'Confira em Visualiza\u00e7\u00e3o de escopos', img:'07-escopos-preview.png',
+  p:'Esse painel mostra exatamente o que voc\u00ea est\u00e1 concedendo. Se bater com a lista do passo anterior, aceite os termos, marque o <b>N\u00e3o sou um rob\u00f4</b> e clique em <b>Criar</b>.',
+  trava:'Olhe o campo <b>URL de retornos de chamada de notifica\u00e7\u00e3o</b>, no fim da p\u00e1gina. <b>Se estiver cinza, pule</b> \u2014 o painel n\u00e3o usa notifica\u00e7\u00e3o, ele consulta o Mercado Livre quando voc\u00ea manda. S\u00f3 preencha (com o mesmo <code>https://httpbin.org/get</code>) se ele estiver branco e o bot\u00e3o Criar recusar: isso acontece quando algum <b>T\u00f3pico</b> aparece marcado sozinho. O captcha <b>expira em cerca de 2 minutos</b>: se demorar, marque de novo.'},
+
+ {n:'.08', t:'O Mercado Livre pode pedir um c\u00f3digo por SMS', img:'08-validacao-2fa.png',
+  p:'Para mostrar a chave secreta ele costuma confirmar que \u00e9 voc\u00ea mesmo. Se essa tela aparecer, escolha SMS, WhatsApp ou liga\u00e7\u00e3o e digite os 6 d\u00edgitos. Se voc\u00ea j\u00e1 validou h\u00e1 pouco, ele pula direto.',
+  trava:'<b>Tenha o celular por perto.</b> \u00c9 aqui que a maioria trava: a chave secreta <b>n\u00e3o aparece</b> junto com o App ID \u2014 vem escondida na p\u00e1gina do aplicativo, e o caminho at\u00e9 ela pode passar por essa valida\u00e7\u00e3o.'},
+
+ {n:'.09', t:'Copie o App ID e a Chave secreta', img:'09-app-id-e-chave.png',
+  p:'O <b>ID do aplicativo</b> fica \u00e0 vista. A <b>Chave secreta</b> vem escondida \u2014 clique no <b>olho</b> ao lado para revelar. Copie os dois e cole no painel, no passo 1.',
+  trava:'A chave secreta \u00e9 como a senha do seu aplicativo. <b>N\u00e3o mande para ningu\u00e9m</b> e n\u00e3o poste em print. Se vazar, volte aqui e gere outra.'},
+
+ {n:'.10', t:'Autorize e copie a URL de volta', img:'10-autorizar.png',
+  p:'De volta ao painel, clique em <b>Salvar e gerar o link</b> e abra a autoriza\u00e7\u00e3o. Esta tela lista as permiss\u00f5es que voc\u00ea escolheu. Clique em <b>Autorizar</b> \u2014 o navegador abre uma p\u00e1gina mostrando o seu c\u00f3digo. Copie <b>de <code>TG-</code> em diante, sem as aspas</b> e cole no passo .02 do painel. Colar a URL inteira da barra de endere\u00e7os tamb\u00e9m funciona.',
+  trava:'Se um dia voc\u00ea <b>mudar as permiss\u00f5es</b> do aplicativo, precisa autorizar de novo. O acesso antigo continua com as permiss\u00f5es velhas e volta a dar 403.'}
+];
+
+function abreGuia(){
+  if(document.querySelector('.gd')) return;
+  const d=document.createElement('div');
+  d.className='gd'; d.setAttribute('role','dialog'); d.setAttribute('aria-modal','true');
+  d.setAttribute('aria-label','Como criar seu aplicativo no DevCenter');
+  d.innerHTML='<div class="gdx">'
+    +'<div class="gdt"><h2>Como criar seu aplicativo no DevCenter'
+    +'<span class="sb">10 passos, com a tela de cada um. Leva uns 5 minutos \u2014 testado criando um aplicativo do zero.</span></h2>'
+    +'<button type="button" class="gdf" id="gfech" aria-label="Fechar o guia">&#10005;</button></div>'
+    +'<div class="gdc">'+PASSOS.map(function(x){
+        return '<div class="gp"><div class="cab"><span class="nm2">'+x.n+'</span>'
+          +'<div><h3>'+x.t+'</h3></div></div>'
+          +'<p>'+x.p+'</p>'
+          +(x.lista?'<ul><li>'+x.lista.join('</li><li>')+'</li></ul>':'')
+          +(x.trava?'<div class="trava"><span class="ic2" aria-hidden="true">!</span><span>'+x.trava+'</span></div>':'')
+          +(x.trava2?'<div class="trava"><span class="ic2" aria-hidden="true">!</span><span>'+x.trava2+'</span></div>':'')
+          +(x.baixa?'<a class="baixa" href="/guia/logo-exemplo.png" download>&#11015; '+x.baixa+'</a>':'')
+          +'<img src="/guia/'+x.img+'" alt="Tela do passo '+x.n+': '+x.t+'" loading="lazy"></div>';
+      }).join('')
+    +'</div></div>';
+  document.body.appendChild(d);
+  document.body.style.overflow='hidden';
+  const fecha=function(){ d.remove(); document.body.style.overflow=''; };
+  d.querySelector('#gfech').onclick=fecha;
+  d.onclick=function(e){ if(e.target===d) fecha(); };        // clicou no fundo escuro
+  document.addEventListener('keydown',function esc(e){
+    if(e.key==='Escape'){ fecha(); document.removeEventListener('keydown',esc); }});
+  d.querySelector('#gfech').focus();
+}
+// delegado: o botao pode nascer em qualquer tela que o painel redesenha
+// "+ N mais" abre o resto das reclamacoes ali mesmo, sem sair da linha
+document.addEventListener('click',function(e){
+  const b=e.target.closest('.vermais'); if(!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const cx=b.parentElement, escondidas=[...cx.querySelectorAll('.rl.extra')];
+  const abrindo=b.getAttribute('aria-expanded')!=='true';
+  escondidas.forEach(x=>{ x.hidden=!abrindo; });
+  b.setAttribute('aria-expanded', abrindo?'true':'false');
+  b.textContent = abrindo ? 'mostrar menos' : ('+ '+escondidas.length+' mais');
+});
+
+document.addEventListener('click',function(e){
+  const b=e.target.closest('[data-guia]');
+  if(b){ e.preventDefault(); e.stopPropagation(); abreGuia(); }
+});
+
+// ---------- conectar a conta do vendedor ----------
+function telaLogin(C, erro){
+  topo(C && C.ligado);
+  const passo = C.tem_app ? 2 : 1;   // so existem dois; conectar ja sai desta tela
+  $('#sub').textContent = '';
+  $('#kpis').innerHTML = '';
+  if($('#eu')) $('#eu').innerHTML='';
+  $('#app').innerHTML = `<div class="setup">
+    <h2>Conecte a sua conta do Mercado Livre</h2>
+    <div class="sub2">O token fica só neste computador, no arquivo <code>conta.json</code>
+      — nada é enviado para lugar nenhum.${C.pacote?` <span class="muted">Painel v${esc(C.pacote)}.</span>`:''}</div>
+
+    <div class="passo2 ${passo>1?'feito':''}" id="p1">
+      <span class="n2">.01</span><h3>Cole os dados do seu aplicativo</h3>
+      ${passo>1?`<button type="button" class="reabrir" id="p1edit">\u2713 salvo \u2014 alterar</button>`:''}
+      <div class="campo"><label for="fa">App ID</label>
+        <input id="fa" name="app_id" inputmode="numeric" autocomplete="off" spellcheck="false"
+          value="${esc(C.app_id||'')}" placeholder="1234567890123456">
+        <a class="onde" href="https://developers.mercadolivre.com.br/devcenter"
+           target="_blank" rel="noopener">Onde acho? Abrir minhas aplicações ↗</a></div>
+      <div class="campo"><label for="fs">Chave secreta (Client Secret)</label>
+        <input id="fs" name="secret" type="password" autocomplete="off"
+          placeholder="${C.tem_app?'••••••••  (já salva, preencha só para trocar)':'A chave do seu app'}">
+        <a class="onde" id="lchave" href="https://developers.mercadolivre.com.br/devcenter"
+           target="_blank" rel="noopener">Abrir a página da minha chave ↗</a></div>
+      <div class="campo"><label for="fr">URI de redirect — igual à que você cadastrou</label>
+        <input id="fr" name="redirect" type="url" autocomplete="off" spellcheck="false"
+          value="${esc(C.redirect||'https://httpbin.org/get')}">
+        <a class="onde" id="lredir" href="https://developers.mercadolivre.com.br/devcenter"
+           target="_blank" rel="noopener">Abrir onde cadastrei o redirect ↗</a>
+        <span class="dica">na página que abrir, clique em <b>Continuar</b> — o campo fica logo abaixo</span></div>
+      <div class="campo"><button type="button" class="pill dark" id="bapp">Salvar e gerar o link <span class="arr" aria-hidden="true">→</span></button></div>
+    </div>
+
+    <div class="passo2 ${passo<2?'off':''}">
+      <span class="n2">.02</span><h3>Autorize e copie o código</h3>
+      <div class="ajuda">
+        ${C.url?`<a class="lk" href="${esc(C.url)}" target="_blank" rel="noopener"><b>Abrir a autorização no Mercado Livre ↗</b></a><br>`
+               :'Salve o passo 1 para liberar o link.<br>'}
+        Depois de autorizar, o navegador abre uma página que mostra o seu código.
+        Copie <b>de <code>TG-</code> em diante, sem as aspas</b> — por exemplo
+        <code>TG-68c1a4…-123456789</code>. Se preferir, pode colar a URL inteira da barra de
+        endereços: o painel acha o código dos dois jeitos.</div>
+      <div class="campo"><label for="fc">Cole aqui o código (de <code>TG-</code> em diante)</label>
+        <input id="fc" name="codigo" autocomplete="off" spellcheck="false"
+          placeholder="TG-68c1a4…-123456789"></div>
+      <div class="campo"><button type="button" class="pill dark" id="bcod">Conectar <span class="arr" aria-hidden="true">→</span></button></div>
+      ${erro?`<div class="erro" role="alert">${esc(erro)}</div>`:''}
+    </div>
+
+    </div>
+  </div>`;
+
+  // Com o App ID em maos da para abrir DIRETO a pagina do aplicativo — a chave e o
+  // redirect moram os dois la (o redirect so aparece depois do botao Continuar).
+  const LISTA='https://developers.mercadolivre.com.br/devcenter';
+  const lig=()=>{
+    const id=($('#fa').value||'').replace(/\D/g,'');
+    const bom=id.length>=10, url=bom?LISTA+'/edit-app/'+id:LISTA;
+    [['#lchave','Abrir a p\u00e1gina da minha chave \u2197','Preencha o App ID para abrir a p\u00e1gina da chave'],
+     ['#lredir','Abrir onde cadastrei o redirect \u2197','Preencha o App ID para abrir essa p\u00e1gina']]
+    .forEach(function(e){
+      const a=$(e[0]); if(!a) return;
+      a.href=url; a.textContent = bom?e[1]:e[2]; a.classList.toggle('morto', !bom);
+    });
+  };
+  $('#fa').addEventListener('input', lig); lig();
+
+  // trancado nao e definitivo: quem digitou errado precisa poder voltar
+  const reab = $('#p1edit');
+  if(reab) reab.onclick = ()=>{ $('#p1').classList.remove('feito'); reab.remove(); $('#fa').focus(); };
+
+  // ⚠️ Botao que vira "Conectando…" TEM de voltar em TODOS os caminhos. Antes,
+  // se o fetch estourasse (servidor reiniciando, rede caindo), o await rejeitava,
+  // o codigo abaixo nunca rodava e o botao ficava travado para sempre, calado.
+  const trava = (b, txt) => { const antes = b.innerHTML; b.textContent = txt; b.disabled = true;
+    return () => { b.innerHTML = antes; b.disabled = false; }; };
+  const avisa = (passo, msg) => {
+    const cx = document.querySelectorAll('.passo2')[passo];
+    let e = cx.querySelector('.erro');
+    if(!e){ e = document.createElement('div'); e.className = 'erro'; e.setAttribute('role','alert'); cx.appendChild(e); }
+    e.textContent = msg;
+  };
+  const manda = async (rota, corpo) => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 45000);      // teto: nunca pendura
+    try { const resp = await fetch(rota, {method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(corpo), signal: ctrl.signal});
+          return await resp.json(); }
+    finally { clearTimeout(t); }
+  };
+
+  $('#bapp').onclick = async ()=>{
+    const solta = trava($('#bapp'), 'Salvando…');
+    try{
+      const r = await manda('/api/app', {app_id:$('#fa').value, secret:$('#fs').value, redirect:$('#fr').value});
+      if(r.erro){ solta(); return avisa(0, r.erro); }
+      telaLogin(r);
+    }catch(e){
+      solta();
+      avisa(0, e.name==='AbortError' ? 'Demorou demais. O painel está rodando?'
+            : 'Não consegui falar com o painel. Ele está aberto nesta máquina?');
+    }
+  };
+
+  $('#bcod').onclick = async ()=>{
+    const solta = trava($('#bcod'), 'Conectando…');
+    try{
+      const r = await manda('/api/codigo', {codigo:$('#fc').value});
+      if(r.ligado) return carrega(false);
+      solta();
+      avisa(1, r.erro || 'Não consegui trocar o código. Confira se a URI de redirect é exatamente a mesma cadastrada no app — e lembre que o código vale poucos minutos: se demorou, gere outro.');
+    }catch(e){
+      solta();
+      avisa(1, e.name==='AbortError' ? 'Demorou demais. Gere um código novo e tente de novo.'
+            : 'Não consegui falar com o painel. Ele está aberto nesta máquina?');
+    }
+  };
+}
+
+// A TELA CONFERE ANTES DE MOSTRAR. O coletor ja conferiu (regras.checar) e gravou
+// o veredito em D.conferencia; a tela repete o essencial por conta propria — versao,
+// casos, situacao de cada anuncio, taxa, cards = chips. Qualquer falha: nenhum card,
+// so a lista do que falhou e o botao de coletar de novo. Errado nao se mostra.
+function conferir(D){
+  const p=[];
+  if(D.conferencia && !D.conferencia.ok){
+    (D.conferencia.falhas||[]).forEach(f=>p.push('regra: '+f));
+    (D.conferencia.desconhecidos||[]).forEach(f=>p.push('o painel não conhece: '+f));
+    (D.conferencia.leitura||[]).forEach(f=>p.push('leitura incompleta: '+f));
+  }
+  const casos=new Set((D.casos||[]).map(c=>c[0]));
+  if(!casos.size) p.push('lista de casos da Situação ausente');
+  let forte=0,punido=0,semnota=0,decola=0,pune=0,dorm=0,sn=0,frz=0;
+  for(const i of D.itens||[]){
+    const s=i.situacao;
+    if(!s||!casos.has(s[0])){ p.push(i.id+': situação fora da lista'); continue; }
+    if(s[0]==='forte') forte++; else if(s[0]==='punido') punido++;
+    else if(s[0]==='semnota') semnota++; else if(s[0]==='decola') decola++;
+    if(i.pune) pune++; if(i.dormente) dorm++; if(i.sem_nota) sn++; if(i.freeze) frz++;
+    if(i.base_vendas && Math.abs((i.taxa||0)-100*i.reclamacoes/i.base_vendas)>1e-6) p.push(i.id+': taxa não bate com reclamações ÷ vendas');
+  }
+  if(pune+dorm!==forte+punido) p.push(`card "perdendo exposição" (${pune+dorm}) ≠ chips preto + vinho (${forte+punido})`);
+  if(sn!==semnota) p.push(`card "sem nota ainda" (${sn}) ≠ chips (${semnota})`);
+  if(frz!==decola) p.push(`Decola (${frz}) ≠ chips (${decola})`);
+  return p;
+}
+function bloqueia(p){
+  $('#kpis').innerHTML='';
+  $('#sub').innerHTML=`<b>${esc((D.conta||{}).nick||'')}</b> · ${esc(D.quando||'')}${D.pacote?` · painel v${esc(D.pacote)}`:''}`;
+  $('#app').innerHTML=`<div class="vazio">
+    <div class="ei ruim" aria-hidden="true">!</div>
+    <h2>O painel não passou na própria conferência</h2>
+    <p>Antes de mostrar qualquer número, o painel confere os dados contra as regras.
+      Desta vez ${p.length===1?'uma conferência falhou':p.length+' conferências falharam'} — então ele
+      não mostra nada, para não mostrar errado.</p>
+    <ul class="falhas">${p.slice(0,12).map(x=>`<li>${esc(x)}</li>`).join('')}${p.length>12?`<li>… e mais ${p.length-12}</li>`:''}</ul>
+    <p><button type="button" class="pill dark" id="denovo">Coletar de novo <span class="arr" aria-hidden="true">→</span></button></p>
+    <p class="muted sm">Se falhar de novo, mande o texto acima e a versão (painel v${esc(D.pacote||'?')}) para quem te passou o painel.</p>
+  </div>`;
+  $('#denovo').onclick=function(){ carrega(true); };
+}
+
+// Os dois botoes do topo sao exclusivos: desconectado so faz sentido o guia,
+// conectado so faz sentido atualizar. Nunca os dois juntos.
+function topo(ligado){
+  $('#bguia').hidden = !!ligado;
+  $('#att').hidden   = !ligado;
+}
+
+// `reparo` conta as coletas automaticas desta carga de pagina: a tela tenta se
+// consertar UMA vez (coleta de novo) antes de bloquear. Clicar em Atualizar zera.
+let reparo=0;
+async function carrega(f, automatico){
+  if(!automatico) reparo=0;
+  const C = await (await fetch('/api/conta')).json();
+  C_AVISO = C.aviso || null;
+  topo(C.ligado);
+  if(!C.ligado) return telaLogin(C);
+  const main=$('#app'), st=$('#status'), att=$('#att');
+  if(f){
+    // refetch mantem a tela anterior a meia opacidade — sem esqueleto, sem pulo
+    main.classList.add('carregando'); att.disabled=true; st.classList.remove('falha');
+    st.textContent='Lendo o Mercado Livre…';
+    let fim=false;   // uma leitura do progresso lancada antes do fim chegava depois e cobria o resultado
+    const t=setInterval(async function(){try{const p=await(await fetch('/api/progresso')).json();
+      if(p.msg&&!fim) st.textContent=p.msg.replace(/[.…]+$/,'')+'…'}catch(e){}},900);
+    // ⚠️ a coleta podia falhar e a tela apagava a mensagem: falha silenciosa,
+    // o vendedor achava que atualizou. E se o fetch estourasse o botao nunca
+    // voltava. Agora o erro fica na tela e o botao destrava sempre.
+    let r={};
+    try{ r=await(await fetch('/api/coletar',{method:'POST'})).json(); }
+    catch(e){ r={erro:'não consegui falar com o painel — ele está aberto nesta máquina?'}; }
+    fim=true; clearInterval(t);
+    main.classList.remove('carregando'); att.disabled=false;
+    st.textContent = r.erro ? ('⚠ a atualização falhou: '+r.erro) : '';
+    st.classList.toggle('falha', !!r.erro);
+  }
+  cartaoConta(C);
+  D=await(await fetch('/api/dados')).json();
+  // AUTO-CONSERTO: sem dados, formato velho ou conferencia reprovada -> coleta de
+  // novo sozinho, uma vez. So depois disso a tela bloqueia e pede ajuda.
+  const precisa = D.vazio ? 'primeira leitura da conta'
+                : (D.versao!==undefined && D.versao!==4) ? 'dados de uma versão anterior'
+                : null;
+  const prob = precisa ? [] : conferir(D);
+  if(precisa || prob.length){
+    if(reparo<1 && !(f && !precisa && prob.length===0)){
+      reparo++;
+      st.textContent = (precisa || ('a conferência reprovou os dados ('+prob.length+') — refazendo'))+'…';
+      return carrega(true, true);
+    }
+    if(precisa){
+      $('#kpis').innerHTML='';
+      $('#app').innerHTML='<div class="vazio">'+(D.vazio?'Sem dados ainda.':'Os dados salvos são de uma versão anterior do painel.')
+        +' Clique em <b>Atualizar os anúncios da conta</b>.</div>';
+      return;
+    }
+    bloqueia(prob); return;
+  }
+  pinta();
+  if(D.avisos&&D.avisos.length&&!st.textContent){
+    st.textContent='⚠ '+D.avisos.join(' · '); st.classList.add('falha');
+  }
+}
+$('#att').onclick=function(){carrega(true)};
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  const eu=$('#eu'); if(eu&&eu.querySelector('.menu')){ eu._fecha(); $('#euc').focus(); return; }
+  if(aberto){ const id=aberto; aberto=null; tabela();
+    const b=document.querySelector(`tr.ln[data-id="${id}"] .exp`); if(b) b.focus(); }
+});
+carrega(false);
+</script>
+</body>
+</html>
