@@ -179,7 +179,8 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
 - `.03 Reclamações`: as da base; sem base, as do próprio anúncio. Cada uma com
   `pesa agora` / `pesa pouco`, em quantos dias sai da janela, o link **abrir a venda ↗**
   (`mercadolivre.com.br/vendas/{pedido}/detalhe` — a página "Detalhe da venda", onde estão a
-  reclamação, o produto e o comprador; testado logado) e, quando é de outro anúncio da
+  reclamação, o produto e o comprador; testado logado). O link abre na conta logada **no
+  navegador**: se for outra, o ML mostra erro — por isso a lista avisa qual conta é preciso estar e, quando é de outro anúncio da
   categoria, o nome do produto com link para o anúncio. 7 visíveis, "+ N mais".
 
 ### 3.5 Aba Categorias
@@ -201,6 +202,9 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
   **Comunicações pré e pós-vendas** (libera as reclamações). Todas em Leitura.
 - Token vale 6 h; renova sozinho com o `refresh_token` (rotaciona; o novo é gravado).
 - **Desconectar apaga tudo** (`conta.json` → `{}`). Trocar de app apaga o token antigo.
+- **Dados de outra conta nunca aparecem:** se o `dados.json` salvo é de outro `user_id`, o
+  painel trata como "sem dados" e lê a conta certa sozinho (trocar de conta ou passar a pasta
+  adiante não mostra os anúncios do dono anterior).
 - `estado()`: ML respondeu **4xx** → desconectado. ML **não respondeu** → continua
   conectado e avisa.
 - Servidor escuta **só** em `127.0.0.1:8796`. `POST` com `Origin` de outro site → **403**.

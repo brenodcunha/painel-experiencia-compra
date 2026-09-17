@@ -95,6 +95,13 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, dict(conta.estado(), pacote=regras.PACOTE))
         if p == "/api/dados":
             d = coletor.carrega()
+            # ⚠️ dados de OUTRA conta: trocar de conta (ou passar a pasta adiante) deixava
+            # o painel mostrando os anuncios do dono anterior com o nome da conta nova.
+            # Tratar como "sem dados" faz a tela ler a conta certa sozinha.
+            if d and not d.get("vazio"):
+                quem = (conta.estado() or {}).get("user_id")
+                if quem and (d.get("conta") or {}).get("id") not in (None, quem):
+                    d = None
             if d and d.get("versao") == regras.VERSAO:
                 # AUTO-CONSERTO antes de mostrar: a classificacao e refeita pela regra
                 # a partir dos contadores crus, e o veredito e fechado de novo. So o

@@ -633,12 +633,13 @@ function detalhe(i){
           : `<a class="prod" href="https://produto.mercadolivre.com.br/${esc(String(r.item||'').replace(/^MLB/,'MLB-'))}" target="_blank" rel="noopener">${esc(r.titulo||r.item||'')}</a> <i>(fora da sua lista)</i>`;
         return `<div class="rl${k>=7?' extra':''}"${k>=7?' hidden':''}>
         <div><b>${esc(motivo(r.nome))}</b>
-          ${r.pedido?`<a class="lk2" href="https://www.mercadolivre.com.br/vendas/${esc(r.pedido)}/detalhe" target="_blank" rel="noopener" title="Abrir a venda ${esc(r.pedido)} no Mercado Livre">abrir a venda ↗</a>`:''}
+          ${r.pedido?`<a class="lk2" href="https://www.mercadolivre.com.br/vendas/${esc(r.pedido)}/detalhe" target="_blank" rel="noopener" title="Abrir a venda ${esc(r.pedido)} no Mercado Livre — é preciso estar logado como ${esc((D.conta||{}).nick||'esta conta')} neste navegador">abrir a venda ↗</a>`:''}
           <span class="muted">${dm(r.data)} · ${prod}</span></div>
         <div class="num muted">${r.item===i.id?(r.pesa?'<b>pesa agora</b>':'pesa pouco')+' · ':''}sai em ${r.sai}d</div></div>`; }).join('')
         +(lst.length>7?`<button type="button" class="vermais" data-ver="${i.id}"
              aria-expanded="false">+ ${lst.length-7} mais</button>`:'')
-       :'<div class="muted sm">Nenhuma na base desta nota.</div>'}`; })()}
+       :'<div class="muted sm">Nenhuma na base desta nota.</div>'}
+      ${lst.length&&lst.some(r=>r.pedido)?`<div class="muted sm" style="margin-top:10px">Os links abrem no Mercado Livre com a conta logada <b>neste navegador</b> — tem de ser a <b>${esc((D.conta||{}).nick||'')}</b>, senão o Mercado Livre mostra erro.</div>`:''}`; })()}
     </div>
   </div>`;
 }
