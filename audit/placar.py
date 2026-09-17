@@ -2,7 +2,7 @@
 """Placar: o que o painel diz x o que o proprio ML escreve em cada anuncio.
 
     python audit/placar.py dados.json            # depois da coleta (qualquer conta)
-    python audit/placar.py audit/passo0/p0_HEUREKAS.json   # linhas do passo 0
+    python audit/placar.py audit/passo0/p0_<conta>.json   # linhas do passo 0 (nao vao no pacote)
 
 Roda ANTES e DEPOIS de qualquer mudanca de modelo. Se cair abaixo do piso medido em
 16/09/2026 em 4 contas (base 95%/89%, reclamacao propria 95% entre anuncios que vendem, cinza 88%), nao entrega.
