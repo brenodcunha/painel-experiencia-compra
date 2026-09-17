@@ -286,6 +286,10 @@ td.det{padding:0;background:#f8fafc}
 .ri{font-size:14px;padding:4px 0 4px 16px;position:relative;color:var(--ink)}
 .ri:before{content:"›";position:absolute;left:3px;color:var(--accent-ink);font-weight:700}
 .rl{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:7px 0;border-top:1px solid var(--hair)}
+.rl .lk2{font-size:12.5px;font-weight:600;color:var(--accent-ink);text-decoration:none;white-space:nowrap}
+.rl .lk2:hover{text-decoration:underline}
+.rl .prod{color:var(--ink-2);text-decoration:none}
+.rl .prod:hover{text-decoration:underline}
 .rl:first-of-type{border-top:0}
 .rl b{font-weight:600} .rl .muted{font-size:12.5px;display:block}
 .lk{display:inline-block;margin-top:10px;font-size:14px;font-weight:600}
@@ -454,7 +458,14 @@ const TRAD={not_working_item:'Produto não funciona',broken_item:'Produto quebra
  delivery_date_was_not_met:'Prazo de entrega não cumprido',
  change_receiver_address:'Endereço errado',unauthorized_purchase:'Compra não autorizada',
  shipment_problem_other:'Problema no envio',unprinted_label:'Etiqueta não imprimiu',
- unavailable_product_other:'Produto indisponível',repentant_buyer:'Arrependimento'};
+ unavailable_product_other:'Produto indisponível',repentant_buyer:'Arrependimento',
+ missing_invoice:'Nota fiscal não chegou',fake_different:'Não é da marca original / falso',
+ damaged_package_empty_box:'Embalagem danificada, caixa vazia',damaged_package_missing_item:'Embalagem danificada, faltou o produto',
+ broken_item_fashion:'Produto quebrado',defective_item_change:'Defeito, quer trocar',
+ item_not_useful_fashion_different_change:'Chegou bem, quer trocar',different_color_or_size_fashion:'Cor, tamanho ou modelo errado',
+ bigger_than_expected_fashion:'Maior do que esperava',missing_accessories_change:'Faltou acessório, quer trocar'};
+// motivo que o ML criar depois: mostra legivel (sem sublinhado), nunca o codigo cru
+const motivo=n=>TRAD[n]||(n?String(n).replace(/_/g,' '):'');
 
 function info(i){
   const c=D.categorias.find(x=>x.id===i.categoria)||{};
@@ -612,10 +623,19 @@ function detalhe(i){
         const lst = rec.length ? rec : minhas.map(x=>({...x, sai:R().JANELA-x.dias}));
         const tit = rec.length ? `As ${rec.length} reclamações na base` : minhas.length ? `As ${minhas.length} reclamações deste anúncio no ano` : 'Reclamações';
         return `<div class="dt"><span class="n">.03</span>${tit}</div>
-      ${lst.length?lst.map((r,k)=>`<div class="rl${k>=7?' extra':''}"${k>=7?' hidden':''}>
-        <div><b>${esc(TRAD[r.nome]||r.nome||'')}</b>
-          <span class="muted">${dm(r.data)}${r.item&&r.item!==i.id?' · outro anúncio':' · este anúncio'}</span></div>
-        <div class="num muted">${r.item===i.id?(r.pesa?'<b>pesa agora</b>':'pesa pouco')+' · ':''}sai em ${r.sai}d</div></div>`).join('')
+      ${lst.length?lst.map((r,k)=>{
+        // cada reclamacao abre a VENDA dela no ML (a pagina mostra a reclamacao, o produto e o
+        // comprador); quando e de outro anuncio da categoria, o nome do produto leva ao anuncio
+        const outro = r.item && r.item!==i.id;
+        const it2 = outro ? D.itens.find(y=>y.id===r.item) : null;
+        const prod = !outro ? 'este anúncio'
+          : (it2&&it2.link) ? `<a class="prod" href="${esc(it2.link)}" target="_blank" rel="noopener" title="${esc(r.titulo||r.item)}">${esc((r.titulo||r.item||'').slice(0,42))}${(r.titulo||'').length>42?'…':''}</a>`
+          : `<a class="prod" href="https://produto.mercadolivre.com.br/${esc(String(r.item||'').replace(/^MLB/,'MLB-'))}" target="_blank" rel="noopener">${esc(r.titulo||r.item||'')}</a> <i>(fora da sua lista)</i>`;
+        return `<div class="rl${k>=7?' extra':''}"${k>=7?' hidden':''}>
+        <div><b>${esc(motivo(r.nome))}</b>
+          ${r.pedido?`<a class="lk2" href="https://www.mercadolivre.com.br/vendas/${esc(r.pedido)}/detalhe" target="_blank" rel="noopener" title="Abrir a venda ${esc(r.pedido)} no Mercado Livre">abrir a venda ↗</a>`:''}
+          <span class="muted">${dm(r.data)} · ${prod}</span></div>
+        <div class="num muted">${r.item===i.id?(r.pesa?'<b>pesa agora</b>':'pesa pouco')+' · ':''}sai em ${r.sai}d</div></div>`; }).join('')
         +(lst.length>7?`<button type="button" class="vermais" data-ver="${i.id}"
              aria-expanded="false">+ ${lst.length-7} mais</button>`:'')
        :'<div class="muted sm">Nenhuma na base desta nota.</div>'}`; })()}
@@ -1156,7 +1176,7 @@ async function carrega(f, automatico){
   // AUTO-CONSERTO: sem dados, formato velho ou conferencia reprovada -> coleta de
   // novo sozinho, uma vez. So depois disso a tela bloqueia e pede ajuda.
   const precisa = D.vazio ? 'primeira leitura da conta'
-                : (D.versao!==undefined && D.versao!==5) ? 'dados de uma versão anterior'
+                : (D.versao!==undefined && D.versao!==6) ? 'dados de uma versão anterior'
                 : null;
   const prob = precisa ? [] : conferir(D);
   if(precisa || prob.length){

@@ -10,8 +10,8 @@ A regra e a oficial do Mercado Livre (mercadolivre.com.br/ajuda/31968) e foi
 conferida em duas contas contra o texto que o proprio ML escreve em cada
 anuncio; os numeros estao em audit/passo0_medicoes.md e audit/placar.py.
 """
-VERSAO = 5              # formato do dados.json; a tela recusa versao diferente (e coleta de novo sozinha)
-PACOTE = "1.2"          # versao do pacote entregue aos vendedores (aparece na tela)
+VERSAO = 6              # formato do dados.json; a tela recusa versao diferente (e coleta de novo sozinha)
+PACOTE = "1.3"          # versao do pacote entregue aos vendedores (aparece na tela)
 DATA_REGRAS = "17/09/2026"   # quando estas regras foram conferidas pela ultima vez
 LIM_ITEM = 100          # vendas do ANUNCIO -> usa so ele
 LIM_CAT = 200           # vendas da CATEGORIA no ano -> herda dela; abaixo, cinza

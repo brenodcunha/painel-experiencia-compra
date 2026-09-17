@@ -685,6 +685,7 @@ def coleta(prog=lambda s: None):
     lista = []
     for c, p, cat, d in sorted(validas, key=lambda z: z[0]["date_created"], reverse=True):
         lista.append(dict(id=c["id"], data=c["date_created"][:10], dias=d, pesa=d <= PESO, grupo=c["_grupo"],
+                          pedido=c.get("_ped"),           # para abrir a venda no ML (detalhe da venda)
                           motivo=c.get("reason_id"), nome=c["_nome"], motivo_txt=c["_txt"],
                           sai60=60 - d, sai365=365 - d,
                           item=p["i"], categoria=cat, cat_nome=nome_cat(cat),

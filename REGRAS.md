@@ -119,7 +119,7 @@ conta  ⇔  reason.flow termina em "_delivered"   (o produto chegou)
 
 Contadores por anúncio e por categoria em **60, 180 e 365 dias**; última venda de cada
 anúncio (`dias_sem_venda`). Gravação **atômica** (`.tmp` + `os.replace`).
-**Versão do formato:** `dados.json` carrega `versao: 5`; a tela recusa outra **e coleta de novo
+**Versão do formato:** `dados.json` carrega `versao: 6`; a tela recusa outra **e coleta de novo
 sozinha** (é assim que uma versão nova do painel recalcula a conta de quem já usava).
 **Avisos:** tudo que não foi lido inteiro, tudo que o painel não conhece, e toda regra
 que falhou na conferência interna vai em `avisos[]` e aparece na linha de status.
@@ -177,7 +177,10 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
   própria já leve · categoria puxando (com o contador dela) · cancelamentos seus, se houver ·
   e, se não vende, *"o Mercado Livre só refaz a nota quando ele vender"*.
 - `.03 Reclamações`: as da base; sem base, as do próprio anúncio. Cada uma com
-  `pesa agora` / `pesa pouco` e em quantos dias sai da janela. 7 visíveis, "+ N mais".
+  `pesa agora` / `pesa pouco`, em quantos dias sai da janela, o link **abrir a venda ↗**
+  (`mercadolivre.com.br/vendas/{pedido}/detalhe` — a página "Detalhe da venda", onde estão a
+  reclamação, o produto e o comprador; testado logado) e, quando é de outro anúncio da
+  categoria, o nome do produto com link para o anúncio. 7 visíveis, "+ N mais".
 
 ### 3.5 Aba Categorias
 - Lista **só** categorias que já punem. Conta sem nenhuma: estado vazio explicando.

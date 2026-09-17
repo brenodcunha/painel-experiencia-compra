@@ -74,7 +74,7 @@ def categoria(cid, itens, gemeas=(), cancelamentos=0):
 
 
 def reclamacao(cid, item_id, cat, dias):
-    return dict(id=cid, data='2026-01-01', dias=dias, pesa=dias <= PESO, grupo='PRODUTO', motivo='PDD9999',
+    return dict(id=cid, data='2026-01-01', dias=dias, pesa=dias <= PESO, grupo='PRODUTO', motivo='PDD9999', pedido='2000000000001',
                 nome='not_working_item', motivo_txt='', sai60=60 - dias, sai365=365 - dias,
                 item=item_id, categoria=cat, cat_nome='Categoria ' + cat, titulo='Produto')
 
