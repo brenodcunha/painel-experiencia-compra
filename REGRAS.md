@@ -264,7 +264,7 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
   com contagem.
 - **Cada furo vira fixture** em `audit/fixtures/` (gerada por `gerar.py`): punido sem
   base, cálculo antigo, nota 50, conta sem Decola, atalho dos 60 dias, gêmea da mesma
-  família, conta de 3.000. `_quebrado.json` **tem** de falhar.
+  família, cancelamentos do vendedor, conta de 3.000. `_quebrado.json` **tem** de falhar.
 - `python empacotar.py` roda as regras em todas as fixtures e no `dados.json` da máquina
   **antes** de montar o zip. Regra falhando ou dado de conta dentro → **não sai pacote**.
 - `python audit/verificar_regras.py <arquivo>` e `python audit/placar.py <arquivo>` rodam

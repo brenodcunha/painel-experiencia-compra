@@ -14,11 +14,13 @@ A REGRA e a oficial, publicada pelo ML em mercadolivre.com.br/ajuda/31968
     A media dos concorrentes NAO existe em nenhuma rota da API (11 testadas).
     Logo este coletor calcula a SUA taxa e le a nota que o ML publicou; nao preve.
 
-Medido contra o texto que o proprio ML escreve em cada anuncio (audit/placar.py):
-    base anuncio/categoria x texto do ML     89% e 100% nas duas contas
-    cinza pela regra 100/200                 88% e 93%
-    reclamacao PROPRIA derruba so o anuncio  98% dos pares na mesma categoria
-    reclamacao pesa forte por ~60 dias       35% em 100 com reclamacao recente x 95% sem
+Medido contra o texto que o proprio ML escreve em cada anuncio, em 4 contas de 409 a
+961 anuncios (audit/placar.py, pisos gravados la):
+    100+ vendas e nota 100 -> o ML fala do anuncio        100% nas 4
+    <100 vendas e nota <100 -> o ML fala da categoria     93% a 100%
+    reclamacao PROPRIA nao deixa melhor que o irmao        96% a 100% (ambos vendendo)
+    cinza pela regra 100/200                               88% a 93%
+    reclamacao pesa forte por ~60 dias                     35% em 100 com reclamacao recente x 95% sem
 O que sobra de diferenca e nota PARADA: o ML so recalcula quando o anuncio vende.
 
 CALCULO ANTIGO: o ML avisa que "em alguns anuncios ainda nao aplicamos o novo

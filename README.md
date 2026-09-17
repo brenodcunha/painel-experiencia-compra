@@ -23,7 +23,7 @@ Para fechar, feche a janela do terminal.
 Quando receber um zip novo, **descompacte por cima da pasta antiga**, substituindo os
 arquivos. Sua conexão (`conta.json`) e seus dados (`dados.json`) ficam onde estão —
 o zip nunca traz esses dois. Na primeira abertura, se o formato dos dados mudou, o painel
-**refaz a leitura da conta sozinho** — é assim que uma versão nova recalcula tudo. A versão aparece ao lado do nome da conta (`painel v1.1`): é ela que
+**refaz a leitura da conta sozinho** — é assim que uma versão nova recalcula tudo. A versão aparece ao lado do nome da conta (`painel v` + número): é ela que
 você informa se pedir ajuda.
 
 ## Primeira vez: conectar a sua conta

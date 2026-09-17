@@ -1,4 +1,9 @@
-# Auditoria final do projeto — 16/09/2026
+# Auditoria final do projeto — 16/09/2026 (feita na v1.1; histórico)
+
+> Este relatório descreve o estado auditado em 16/09/2026 (pacote v1.1, 21 arquivos, 8
+> fixtures). As versões seguintes estão na seção 8, no fim. Os números de hoje quem dá é o
+> próprio pacote: `python empacotar.py` recusa se qualquer regra, texto fixo ou dado de
+> conta estiver errado.
 
 Escopo: **tudo que é o projeto** — os 21 arquivos que vão no zip, o pacote descompactado como
 um cliente recebe, a tela em 4 contas reais + 9 fixtures, as regras e o auto-conserto, e a
@@ -75,6 +80,18 @@ presentes em `guia/`).
 - O texto gerado por IA do ML contradiz a regra oficial dele em parte dos anúncios com muitas
   vendas e nota abaixo de 100; o painel mostra o texto e não o usa como regra.
 
-## 7. Resultado
+## 7. Resultado (16/09, v1.1)
 Pacote `painel_experiencia_v1.1.zip` (21 arquivos) gerado com regras passando em todas as
 fixtures e no dado real, sem dado de conta dentro. Pronto para distribuir.
+
+## 8. O que mudou depois (17/09/2026)
+- **v1.2** — cancelamentos feitos pelo vendedor contados e mostrados (por anúncio, categoria e
+  conta); medido em 4 contas: o ML conta só o do vendedor; pesa junto com a reclamação, nunca
+  sozinho. Formato 5 → recoleta sozinho.
+- **v1.3** — cada reclamação abre a venda no ML (`vendas/{pedido}/detalhe`) e mostra o produto;
+  10 motivos traduzidos, motivo novo vira texto legível. Formato 6.
+- **v1.4** — o link avisa qual conta precisa estar logada no navegador; dados de outro
+  `user_id` nunca aparecem (trocar de conta recoleta sozinho).
+- **v1.5** — 58 textos fixos da tela em `regras.ROTULOS`; `audit/verificar_textos.py` no
+  portão do empacotador; varredura de apelido sem limite de palavra. 9 fixtures (+ a quebrada),
+  42 arquivos no pacote.
