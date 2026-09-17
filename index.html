@@ -540,10 +540,13 @@ function acao(i,o){
     : i.base_vendas
     ? `o histórico do próprio anúncio: <b>${i.reclamacoes}</b> ${pl(i.reclamacoes)} em <b>${mil(i.base_vendas)}</b> vendas`
     : `algo que o painel não consegue conferir — o anúncio não chegou a ${R().LIM_ITEM} vendas e a categoria não chegou a ${R().LIM_CAT} no ano; vale o texto do Mercado Livre acima`;
+  // cancelamento feito por VOCE conta na nota (oficial e citado pelo ML); medido em 4 contas,
+  // nunca derrubou um anuncio sozinho — entra como fator, nao como veredito
+  const canc = i.cancelamentos ? ` Você também cancelou <b>${i.cancelamentos}</b> venda${i.cancelamentos>1?'s':''} dele no ano — o Mercado Livre conta cancelamento feito pelo vendedor.` : '';
   if(i.ruim){
-    if(pesam) return ['crit',`<b>${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}</b> — reclamação pesa forte por ${peso} dias e depois vai perdendo peso. A mais nova deixa de pesar em <b>${peso-minhas[0].dias} dias</b>.${soVendendo}`];
+    if(pesam) return ['crit',`<b>${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}</b> — reclamação pesa forte por ${peso} dias e depois vai perdendo peso. A mais nova deixa de pesar em <b>${peso-minhas[0].dias} dias</b>.${canc}${soVendendo}`];
     if(minhas.length) return ['warn',`${minhas.length===1?'A única reclamação deste anúncio já passou':`As ${minhas.length} reclamações deste anúncio já passaram`} de ${peso} dias e pesa${minhas.length===1?'':'m'} pouco. O que segura a nota é ${daBase}.${soVendendo}`];
-    return ['warn',`Nenhuma reclamação neste anúncio no ano. O que segura a nota é ${daBase}.${soVendendo}`];
+    return ['warn',`Nenhuma reclamação neste anúncio no ano. O que segura a nota é ${daBase}.${canc}${soVendendo}`];
   }
   if(i.nota===75){
     if(pesam) return ['warn',`75 não tira exposição, mas ${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}. Sem reclamação nova, tende a voltar a 100 depois de ${peso} dias${parada?' — quando vender':''}.`];
@@ -582,6 +585,7 @@ function detalhe(i){
       <div class="chips">
         <span class="ch ${pesam?'on':''}">${minhas.length} neste anúncio no ano${pesam?`<i>${pesam} ainda pesa${pesam>1?'m':''}</i>`:''}</span>
         ${fora?`<span class="ch">${fora} não contam <i>arrependimento / entrega</i></span>`:''}
+        ${i.cancelamentos?`<span class="ch ${i.cancelamentos60?'on':''}">${i.cancelamentos} cancelamento${i.cancelamentos>1?'s':''} seu${i.cancelamentos>1?'s':''} no ano${i.cancelamentos60?`<i>${i.cancelamentos60} nos últimos 60 dias</i>`:''}</span>`:''}
         ${parada?`<span class="ch">${parada}</span>`:''}
       </div>
       ${proj.length?`<div class="dt" style="margin-top:14px"><span class="n">↓</span>Como cai sozinha</div>
@@ -763,6 +767,8 @@ function vistaCategorias(cats){
   <div class="info">
     <div>Gêmea da <b>mesma família</b> (o grupo logo acima da categoria) não entra na lista:
       pelo que medimos, ela herda a mesma nota. Só aparecem gêmeas de outra família, no mesmo domínio.</div>
+    <div>Em <b>Reclam.</b>, "cancel. seus" são vendas que <b>você</b> cancelou na categoria no ano: o Mercado
+      Livre conta esse cancelamento na nota (o do comprador e o de mediação, não).${D.cancelamentos_vendedor?` Nesta conta: ${mil(D.cancelamentos_vendedor)} no ano.`:''}</div>
     <div class="defs">
       <div class="d"><span class="tag neu plain">contador zerado</span>
         <span><b>Você nunca vendeu nessa categoria.</b> Ela não tem contador nenhum, então não
@@ -795,7 +801,8 @@ function vistaCategorias(cats){
     <td class="num">${mil(c.vendas365)}<br><span class="muted" style="font-size:12px">${mil(c.vendas60)} em 60d</span></td>
     <td class="num">${c.reclamacoes||'<span class="muted">0</span>'}
       ${(()=>{const g=c.grupos||{},o=(g.ARREPENDIMENTO||0)+(g.ENTREGA||0);
-        return o?`<br><span class="muted" style="font-size:12px">+${o} não contam</span>`:''})()}</td>
+        return o?`<br><span class="muted" style="font-size:12px">+${o} não contam</span>`:''})()}
+      ${c.cancelamentos?`<br><span class="muted" style="font-size:12px">${c.cancelamentos} cancel. seu${c.cancelamentos>1?'s':''}</span>`:''}</td>
     <td class="num"><span class="tx">${c.taxa==null?'':`<i class="dot ${cs(c.taxa)}" aria-hidden="true"></i>`}${pc(c.taxa)}</span>
       <div class="bar3 ${cs(c.taxa)}" title="${pc(c.taxa)} — barra em relação a 3× a sua média"><i style="width:${Math.min(100,(c.taxa||0)/(3*MEDIA||8)*100)}%"></i></div></td>
     <td class="num">${c.n_anuncios}</td>
@@ -1149,7 +1156,7 @@ async function carrega(f, automatico){
   // AUTO-CONSERTO: sem dados, formato velho ou conferencia reprovada -> coleta de
   // novo sozinho, uma vez. So depois disso a tela bloqueia e pede ajuda.
   const precisa = D.vazio ? 'primeira leitura da conta'
-                : (D.versao!==undefined && D.versao!==4) ? 'dados de uma versão anterior'
+                : (D.versao!==undefined && D.versao!==5) ? 'dados de uma versão anterior'
                 : null;
   const prob = precisa ? [] : conferir(D);
   if(precisa || prob.length){

@@ -192,9 +192,14 @@ def _pedidos(uid, prog, avisos):
                         vistos.add(it["id"])
                         itens.append((it["id"], it.get("category_id")))
                 prim = itens[0] if itens else (None, None)
+                # quem pediu o cancelamento vem na propria busca (`cancel_detail.requested_by`):
+                # seller / buyer / meli. O ML so conta como "cancelamento" o do VENDEDOR
+                # (medido em 4 contas: nos templates ele escreveu 0 onde so havia comprador/mediacao)
+                cd = o.get("cancel_detail") or {}
                 ords[str(o["id"])] = {"i": prim[0], "c": prim[1], "itens": itens,
                                       "d": o["date_created"][:10], "s": o.get("status"),
-                                      "sh": str((o.get("shipping") or {}).get("id") or "")}
+                                      "sh": str((o.get("shipping") or {}).get("id") or ""),
+                                      "canc": cd.get("requested_by") if o.get("status") == "cancelled" else None}
     return ords
 
 
@@ -417,9 +422,15 @@ def coleta(prog=lambda s: None):
     v60i, v180i, v365i = Counter(), Counter(), Counter()   # vendas por anuncio
     v60c, v180c, v365c = Counter(), Counter(), Counter()   # por categoria (inclui encerrados)
     ultima = {}                                            # ultima venda de cada anuncio
+    # cancelamentos feitos pelo VENDEDOR, por anuncio e por categoria (365d e 60d)
+    cv365i, cv60i, cv365c = Counter(), Counter(), Counter()
+    canc_por = Counter()                                   # quem cancelou, na conta inteira
     for o in ords.values():
         d = _dias(o["d"])
         cats_do_pedido = set()
+        vend = o.get("canc") == "seller"
+        if o.get("canc"):
+            canc_por[o["canc"]] += 1
         for iid, icat in (o.get("itens") or [(o["i"], o["c"])]):
             if iid in vivos:
                 v365i[iid] += 1
@@ -429,6 +440,10 @@ def coleta(prog=lambda s: None):
                     v180i[iid] += 1
                 if o["d"] > ultima.get(iid, ""):
                     ultima[iid] = o["d"]
+                if vend:
+                    cv365i[iid] += 1
+                    if d <= 60:
+                        cv60i[iid] += 1
             cat = (meta.get(iid) or {}).get("category_id") or icat
             if cat:
                 cats_do_pedido.add(cat)
@@ -438,6 +453,8 @@ def coleta(prog=lambda s: None):
                 v60c[cat] += 1
             if d <= JANELA_ANTIGA:
                 v180c[cat] += 1
+            if vend:
+                cv365c[cat] += 1
 
     # reclamacoes que CONTAM, nas tres janelas (60 = atalho do fluxograma, 180 =
     # calculo antigo, 365 = padrao)
@@ -583,6 +600,7 @@ def coleta(prog=lambda s: None):
             v60=v60, v180=v180, v365=v365, v60_cat=v60c.get(c, 0), v365_cat=v365c.get(c, 0),
             r60=r60i.get(i, 0), r180=r180i.get(i, 0), r365=r365i.get(i, 0),
             reclamacoes_proprias=r365i.get(i, 0),
+            cancelamentos=cv365i.get(i, 0), cancelamentos60=cv60i.get(i, 0),
             ramo=ramo, janela=jan, reclamacoes=recl, base_vendas=base, taxa=taxa,
             calculo=calc, forma=n.get("forma"), ml=n.get("ml"),
             nota=n.get("valor"), cor=n.get("cor"), rotulo=n.get("texto"),
@@ -657,6 +675,7 @@ def coleta(prog=lambda s: None):
             id=c, nome=nome_cat(c), vendas365=v365c[c], vendas60=v60c.get(c, 0),
             acima_limiar=v365c[c] >= LIM_CAT,
             reclamacoes=r365c.get(c, 0), reclamacoes60=r60c.get(c, 0),
+            cancelamentos=cv365c.get(c, 0),
             taxa=(100.0 * r365c.get(c, 0) / v365c[c]) if v365c[c] else None,
             n_anuncios=len(meus), grupos=dict(gc.get(c, {})),
             notas=dict(sorted(Counter(x["nota"] for x in meus).items(),
@@ -696,6 +715,8 @@ def coleta(prog=lambda s: None):
              total_claims=len(cl), total_conta=len(validas), total_arrependimento=arrep,
              por_grupo=dict(por_grupo), metricas_ml=met,
              vendas60=sum(v60c.values()), vendas365=sum(v365c.values()),
+             # cancelamentos da conta por quem pediu: seller (conta na experiencia), buyer, meli
+             cancelamentos_conta=dict(canc_por), cancelamentos_vendedor=canc_por.get("seller", 0),
              entra_na_conta=entra, itens=itens, categorias=cats, reclamacoes=lista,
              # reclamacoes cujo pedido ja saiu da janela de 365d: normal, nao e aviso
              reclamacoes_sem_pedido=sem_pedido,

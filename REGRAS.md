@@ -80,7 +80,19 @@ conta  ⇔  reason.flow termina em "_delivered"   (o produto chegou)
   (`reclamacoes_sem_pedido`), sem aviso.
 - Cada reclamação carrega `pesa` = tem até 60 dias (pesa forte no próprio anúncio).
 
-### 1.4 As duas formas da API e o que o painel faz
+### 1.4 Cancelamento — conta só o que **você** cancela, e é mostrado, não punido
+- A busca de pedidos traz quem pediu o cancelamento (`cancel_detail.requested_by`: `seller`,
+  `buyer`, `meli`). O ML conta como "cancelamento" **só o do vendedor** (medido: nos anúncios em
+  que ele publica a contagem, escreveu 0 onde só havia comprador ou mediação).
+- É entrada oficial da nota, e o ML cita no texto (*"cancelaste mais pedidos que a média"* → 92%
+  punidos, 4 contas). Mas é raro (129 de 5.166 cancelamentos no ano, 4 contas) e **nunca derrubou
+  um anúncio sozinho** (1 punido em 12 sem reclamação; 187 pares iguais na mesma categoria; toda
+  categoria punida já tinha reclamação ≥ 6,6%).
+- Por isso o painel **conta e mostra** — `cancelamentos` / `cancelamentos60` por anúncio,
+  `cancelamentos` por categoria, `cancelamentos_vendedor` e `cancelamentos_conta` (por quem pediu)
+  na conta — e cita na frase do detalhe, **sem** mudar a faixa de punição.
+
+### 1.5 As duas formas da API e o que o painel faz
 | a API devolve | significa | o painel |
 |---|---|---|
 | `reasoning` (texto em prosa, gerado por IA) | **cálculo novo** | regra da seção 1 |
@@ -107,7 +119,8 @@ conta  ⇔  reason.flow termina em "_delivered"   (o produto chegou)
 
 Contadores por anúncio e por categoria em **60, 180 e 365 dias**; última venda de cada
 anúncio (`dias_sem_venda`). Gravação **atômica** (`.tmp` + `os.replace`).
-**Versão do formato:** `dados.json` carrega `versao: 4`; a tela recusa outra.
+**Versão do formato:** `dados.json` carrega `versao: 5`; a tela recusa outra **e coleta de novo
+sozinha** (é assim que uma versão nova do painel recalcula a conta de quem já usava).
 **Avisos:** tudo que não foi lido inteiro, tudo que o painel não conhece, e toda regra
 que falhou na conferência interna vai em `avisos[]` e aparece na linha de status.
 
@@ -153,15 +166,16 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
 ### 3.4 Detalhe do anúncio
 - `.01 A conta`: reclamações ÷ vendas da **base** (anúncio 60 d, anúncio 365 d,
   categoria, cálculo antigo 180 d ou nenhuma); quantas reclamações são **deste anúncio**
-  no ano e quantas **ainda pesam** (≤ 60 dias); quando parado, o tempo sem vender —
+  no ano e quantas **ainda pesam** (≤ 60 dias); quantas vendas dele **você cancelou** no ano
+  (e nos últimos 60 dias); quando parado, o tempo sem vender —
   **honesto com a idade** (`idade` = dias desde `date_created`): `não vende há N dias` ·
   `nunca vendeu desde que foi criado, há N dias` (anúncio com menos de um ano) ·
   `não vende há mais de um ano` (só se o anúncio tem mais de um ano);
   no cálculo antigo, os números que o ML escreveu.
 - `.02 Por que essa nota`: o texto do próprio ML + **uma frase** dizendo o que segura a
   nota: reclamação própria que ainda pesa (e em quantos dias deixa de pesar) · reclamação
-  própria já leve · categoria puxando (com o contador dela) · e, se não vende, *"o
-  Mercado Livre só refaz a nota quando ele vender"*.
+  própria já leve · categoria puxando (com o contador dela) · cancelamentos seus, se houver ·
+  e, se não vende, *"o Mercado Livre só refaz a nota quando ele vender"*.
 - `.03 Reclamações`: as da base; sem base, as do próprio anúncio. Cada uma com
   `pesa agora` / `pesa pouco` e em quantos dias sai da janela. 7 visíveis, "+ N mais".
 
@@ -169,6 +183,7 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
 - Lista **só** categorias que já punem. Conta sem nenhuma: estado vazio explicando.
 - **Para onde dá para mover** = categorias do **mesmo domínio** e de **outra família**
   (pai diferente). Gêmea da mesma família não entra: medido, herda a mesma nota.
+- A coluna *Reclam.* mostra também `N cancel. seus` na categoria (ver 1.4).
 - Selos do destino (regra oficial dos 200): `contador zerado` · `contador baixo · N de 200`
   · `nota boa comprovada` (≥ 200 vendas suas lá e só 75/100). `listing_allowed = false`
   nunca aparece.

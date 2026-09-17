@@ -18,7 +18,7 @@ VOL = {}     # categoria -> (vendas365, reclamacoes365, pai); definido por fixtu
 
 
 def item(mlb, cat, status='active', nota=100, cor='green', v60=0, v365=0, v180=None, r60=0, r365=0, r180=None,
-         freeze=False, calculo='novo', ml=None, dias_sem_venda=30, idade=400, motivo=None):
+         freeze=False, calculo='novo', ml=None, dias_sem_venda=30, idade=400, motivo=None, cancelamentos=0, cancelamentos60=0):
     vcat, rcat, _ = VOL[cat]
     v180 = v365 if v180 is None else v180
     r180 = r365 if r180 is None else r180
@@ -43,7 +43,8 @@ def item(mlb, cat, status='active', nota=100, cor='green', v60=0, v365=0, v180=N
     return dict(id=mlb, titulo='Produto ' + mlb[-4:], thumb=None, link=None, categoria=cat, cat_nome='Categoria ' + cat,
                 status=status, preco=99.0, estoque=0 if status != 'active' else 5,
                 v60=v60, v180=v180, v365=v365, v60_cat=0, v365_cat=vcat, r60=r60, r180=r180, r365=r365,
-                reclamacoes_proprias=r365, ramo=ramo, janela=jan, reclamacoes=recl, base_vendas=base,
+                reclamacoes_proprias=r365, cancelamentos=cancelamentos, cancelamentos60=cancelamentos60,
+                ramo=ramo, janela=jan, reclamacoes=recl, base_vendas=base,
                 taxa=round(100.0 * recl / base, 8) if base else None, calculo=calculo,
                 forma='template' if calculo == 'antigo' else 'prosa', ml=ml,
                 nota=nota, cor=cor, rotulo=None, pune=pune, dormente=dormente, ruim=ruim, sem_nota=sem_nota,
@@ -54,7 +55,7 @@ def item(mlb, cat, status='active', nota=100, cor='green', v60=0, v365=0, v180=N
                 pode_mover=v365 == 0)
 
 
-def categoria(cid, itens, gemeas=()):
+def categoria(cid, itens, gemeas=(), cancelamentos=0):
     vendas365, reclamacoes, pai = VOL[cid]
     meus = [i for i in itens if i['categoria'] == cid]
     notas = {}
@@ -63,7 +64,7 @@ def categoria(cid, itens, gemeas=()):
     return dict(id=cid, nome='Categoria ' + cid, caminho='Raiz > Familia ' + pai + ' > Categoria ' + cid,
                 dominio='MLB-DOM', pai=pai, permite=True, mestre=None, espelhos=[], papel='solta',
                 vendas365=vendas365, vendas60=0, acima_limiar=vendas365 >= regras.LIM_CAT,
-                reclamacoes=reclamacoes, reclamacoes60=0,
+                reclamacoes=reclamacoes, reclamacoes60=0, cancelamentos=cancelamentos,
                 taxa=round(100.0 * reclamacoes / vendas365, 8) if vendas365 else None,
                 n_anuncios=len(meus), grupos={}, notas=notas,
                 gemeas=[dict(id=g[0], nome='Gemea ' + g[0], caminho='Raiz > Familia %s > Gemea %s' % (g[1], g[0]),
@@ -89,6 +90,7 @@ def conta(nick, itens, cats, recl=()):
                 calculo_antigo=sum(1 for i in itens if i['calculo'] == 'antigo'),
                 total_claims=len(recl), total_conta=len(recl), total_arrependimento=0, por_grupo={'PRODUTO': len(recl)},
                 metricas_ml={}, vendas60=0, vendas365=sum(c['vendas365'] for c in cats), entra_na_conta=[],
+                cancelamentos_conta={'seller': sum(i['cancelamentos'] for i in itens)}, cancelamentos_vendedor=sum(i['cancelamentos'] for i in itens),
                 itens=itens, categorias=cats, reclamacoes=recl, reclamacoes_sem_pedido=0, avisos=[], segundos=1.0)
 
 
@@ -163,6 +165,12 @@ def main():
                            v60=rnd.choice([0, 0, 5, 130]), v365=rnd.choice([0, 3, 40, 150]), r365=rnd.choice([0, 0, 1, 3])))
         cats.append(categoria(cid, it))
     grava('08_gigante_3000.json', conta('GIGANTE', it, cats))
+
+    # 09 cancelamentos do vendedor: punido sem reclamacao propria, com 2 cancelamentos (a frase cita)
+    VOL = {'C8': (300, 25, 'P8')}
+    it = [item('MLB1000000050', 'C8', nota=65, cor='orange', v365=20, cancelamentos=2, cancelamentos60=1),
+          item('MLB1000000051', 'C8', nota=100, cor='green', v365=30)]
+    grava('09_cancelamentos.json', conta('CANCEL', it, [categoria('C8', it, cancelamentos=2)]))
 
     # _quebrado: TEM de falhar (situacao trocada de proposito)
     VOL = {'C9': (300, 30, 'P9')}

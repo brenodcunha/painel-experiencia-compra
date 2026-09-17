@@ -10,9 +10,9 @@ A regra e a oficial do Mercado Livre (mercadolivre.com.br/ajuda/31968) e foi
 conferida em duas contas contra o texto que o proprio ML escreve em cada
 anuncio; os numeros estao em audit/passo0_medicoes.md e audit/placar.py.
 """
-VERSAO = 4              # formato do dados.json; a tela recusa versao diferente
-PACOTE = "1.1"          # versao do pacote entregue aos vendedores (aparece na tela)
-DATA_REGRAS = "16/09/2026"   # quando estas regras foram conferidas pela ultima vez
+VERSAO = 5              # formato do dados.json; a tela recusa versao diferente (e coleta de novo sozinha)
+PACOTE = "1.2"          # versao do pacote entregue aos vendedores (aparece na tela)
+DATA_REGRAS = "17/09/2026"   # quando estas regras foram conferidas pela ultima vez
 LIM_ITEM = 100          # vendas do ANUNCIO -> usa so ele
 LIM_CAT = 200           # vendas da CATEGORIA no ano -> herda dela; abaixo, cinza
 JANELA = 365            # janela padrao (o "ultimo ano" do fluxograma)
@@ -115,6 +115,10 @@ def checar(d):
             notas.append("%s com nota e sem texto do ML" % i["id"])
         if i.get("idade") is None:      # sem idade a tela nao pode dizer "ha mais de um ano"
             notas.append("%s sem data de criacao" % i["id"])
+        # cancelamentos feitos pelo VENDEDOR (o ML conta so esses): contadores sao inteiros e coerentes
+        c365, c60 = i.get("cancelamentos", 0), i.get("cancelamentos60", 0)
+        if not (isinstance(c365, int) and isinstance(c60, int) and 0 <= c60 <= c365):
+            falhas.append("%s cancelamentos inconsistentes (%s / %s)" % (i["id"], c60, c365))
     # cards = soma dos chips, de verdade
     pune = sum(1 for i in it if i["pune"]); dorm = sum(1 for i in it if i["dormente"])
     if pune + dorm != conta["forte"] + conta["punido"]:
@@ -130,6 +134,8 @@ def checar(d):
             falhas.append("categoria %s acima_limiar errado" % c["id"])
         if c["n_anuncios"] != sum(1 for i in it if i["categoria"] == c["id"]):
             falhas.append("categoria %s n_anuncios errado" % c["id"])
+        if not (isinstance(c.get("cancelamentos", 0), int) and c.get("cancelamentos", 0) >= 0):
+            falhas.append("categoria %s cancelamentos invalido" % c["id"])
         for g in c.get("gemeas") or []:
             if g.get("permite") is False:
                 falhas.append("categoria %s oferece gemea %s com listing_allowed=false" % (c["id"], g["id"]))

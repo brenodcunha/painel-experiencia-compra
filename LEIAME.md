@@ -22,8 +22,8 @@ Para fechar, feche a janela do terminal.
 ## Como atualizar para uma versão nova
 Quando receber um zip novo, **descompacte por cima da pasta antiga**, substituindo os
 arquivos. Sua conexão (`conta.json`) e seus dados (`dados.json`) ficam onde estão —
-o zip nunca traz esses dois. Na primeira abertura o painel pede uma nova coleta se o
-formato mudou. A versão aparece ao lado do nome da conta (`painel v1.1`): é ela que
+o zip nunca traz esses dois. Na primeira abertura, se o formato dos dados mudou, o painel
+**refaz a leitura da conta sozinho** — é assim que uma versão nova recalcula tudo. A versão aparece ao lado do nome da conta (`painel v1.1`): é ela que
 você informa se pedir ajuda.
 
 ## Primeira vez: conectar a sua conta
@@ -55,6 +55,9 @@ números — nunca um painel errado.
   reclamação pesa forte por 60 dias) ou a categoria — e as reclamações uma a uma.
 - Se o anúncio não vende há tempo, o painel avisa: o Mercado Livre só refaz a nota
   quando ele vender.
+- Vendas que **você** cancelou aparecem por anúncio e por categoria: o Mercado Livre conta esse
+  cancelamento na nota (o do comprador e o de mediação, não). Medido em quatro contas, ele pesa
+  junto com a reclamação — sozinho não derrubou nenhum anúncio.
 
 O painel **não adivinha a nota**: o Mercado Livre compara você com os outros vendedores
 da categoria, e esses números não existem na API. Ele lê a nota e explica o que a segura.
