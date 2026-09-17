@@ -82,7 +82,7 @@ def reclamacao(cid, item_id, cat, dias):
 def conta(nick, itens, cats, recl=()):
     recl = list(recl)
     return dict(conta=dict(id=1, nick=nick), quando='16/09/2026 00:00', versao=VERSAO,
-                casos=[list(c) for c in regras.CASOS], peso_reclamacao=PESO,
+                casos=[list(c) for c in regras.CASOS], rotulos=dict(regras.ROTULOS), peso_reclamacao=PESO,
                 pacote=regras.PACOTE, regras_data=regras.DATA_REGRAS,
                 regras=dict(LIM_ITEM=regras.LIM_ITEM, LIM_CAT=regras.LIM_CAT, JANELA=regras.JANELA,
                             JANELA_RAPIDA=regras.JANELA_RAPIDA, JANELA_ANTIGA=regras.JANELA_ANTIGA, PESO=regras.PESO),

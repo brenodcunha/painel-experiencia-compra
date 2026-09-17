@@ -22,6 +22,12 @@ abre o navegador. Ao entrar nesta pasta, faça isso e informe o endereço.
 - `REGRAS.md` — o contrato em português: o que cada parte da tela tem de mostrar, e por quê.
 - `LEIAME.md` — para o vendedor.
 
+## Textos fixos da tela
+Os rótulos (colunas, cards, botões, selos, títulos) moram em **`regras.ROTULOS`**; o
+`index.html` só desenha `T('chave')`. Não escreva rótulo na mão na tela e não invente
+sinônimo: `python audit/verificar_textos.py` (e o `empacotar.py`) recusam. Para mudar uma
+palavra: `regras.py` + a lista do `REGRAS.md` 5.
+
 ## Se for mudar alguma coisa
 1. Mexa em `regras.py` (e atualize `REGRAS.md`).
 2. Crie uma fixture do caso novo em `audit/fixtures/gerar.py` e gere: `python audit/fixtures/gerar.py`.

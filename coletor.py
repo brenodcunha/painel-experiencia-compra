@@ -708,7 +708,7 @@ def coleta(prog=lambda s: None):
     antigos = sum(1 for n in notas.values() if n and n.get("calculo") == "antigo")
     d = dict(conta=dict(id=uid, nick=nick),
              quando=dt.datetime.now().strftime("%d/%m/%Y %H:%M"),
-             versao=VERSAO, casos=[list(x) for x in regras.CASOS],
+             versao=VERSAO, casos=[list(x) for x in regras.CASOS], rotulos=dict(regras.ROTULOS),
              pacote=regras.PACOTE, regras_data=regras.DATA_REGRAS,
              regras=dict(LIM_ITEM=LIM_ITEM, LIM_CAT=LIM_CAT, JANELA=JANELA,
                          JANELA_RAPIDA=JANELA_RAPIDA, JANELA_ANTIGA=JANELA_ANTIGA, PESO=PESO),

@@ -11,7 +11,7 @@ conferida em duas contas contra o texto que o proprio ML escreve em cada
 anuncio; os numeros estao em audit/passo0_medicoes.md e audit/placar.py.
 """
 VERSAO = 6              # formato do dados.json; a tela recusa versao diferente (e coleta de novo sozinha)
-PACOTE = "1.4"          # versao do pacote entregue aos vendedores (aparece na tela)
+PACOTE = "1.5"          # versao do pacote entregue aos vendedores (aparece na tela)
 DATA_REGRAS = "17/09/2026"   # quando estas regras foram conferidas pela ultima vez
 LIM_ITEM = 100          # vendas do ANUNCIO -> usa so ele
 LIM_CAT = 200           # vendas da CATEGORIA no ano -> herda dela; abaixo, cinza
@@ -33,6 +33,48 @@ CASOS = (
     ("",        "ok",                                  "no ar, sem punição"),
 )
 _CLASSES = {c[0] for c in CASOS}
+
+# OS TEXTOS FIXOS DA TELA. A tela nao escreve nenhum destes na mao: le daqui (via
+# dados.json / api/conta). Mudou uma palavra, mudou aqui — e no REGRAS.md 5, que o
+# empacotador confere letra por letra (audit/verificar_textos.py).
+ROTULOS = {
+    "btn_atualizar": "Atualizar os anúncios da conta",
+    "btn_guia": "Como criar seu aplicativo no DevCenter",
+    "btn_sair": "Desconectar esta conta",
+    "card_perdendo": "Perdendo exposição",
+    "card_semnota": "Sem nota ainda",
+    "card_taxa": "Taxa geral",
+    "card_categorias": "Categorias afetadas",
+    "leg_taxa": "Taxa", "leg_nota": "Nota", "leg_situacao": "Situação",
+    "col_anuncio": "Anúncio", "col_nota": "Nota", "col_base": "Base",
+    "col_vendas": "Vendas 365d", "col_60": "60d",
+    "col_recl": "Reclam. na base", "col_taxa": "Taxa da base", "col_situacao": "Situação",
+    "base_anuncio": "o anúncio", "base_categoria": "a categoria",
+    "base_antigo": "cálculo antigo", "base_nenhuma": "nenhuma",
+    "det_conta": "A conta", "det_cai": "Como cai sozinha",
+    "det_porque": "Por que essa nota", "det_recomenda": "O ML recomenda",
+    "det_reclamacoes": "Reclamações",
+    "det_reclamacoes_base": "reclamações na base",
+    "det_reclamacoes_anuncio": "reclamações deste anúncio no ano",
+    "lnk_ml": "Abrir no Mercado Livre ↗", "lnk_venda": "abrir a venda ↗",
+    "cat_col_categoria": "Categoria", "cat_col_vendas": "Vendas 365d", "cat_col_recl": "Reclam.",
+    "cat_col_taxa": "Taxa", "cat_col_anuncios": "Anúncios",
+    "cat_col_notas": "Notas que está dando", "cat_col_mover": "Para onde dá para mover",
+    "selo_zerado": "contador zerado", "selo_baixo": "contador baixo", "selo_boa": "nota boa comprovada",
+    "tag_da_nota": "dá a nota", "tag_abaixo": "abaixo de",
+    "tag_espelho_de": "espelho de", "tag_tem_espelho": "tem espelho",
+    "vazio_cat": "Nenhuma categoria sua está punindo",
+    "vazio_filtro": "Nada encontrado com esse filtro.",
+    "vazio_conta": "Esta conta não tem nenhum anúncio.",
+    "vazio_dados": "Sem dados ainda.",
+    "bloqueio_titulo": "O painel não passou na própria conferência",
+    "btn_denovo": "Coletar de novo",
+    "con_titulo": "Conecte a sua conta do Mercado Livre",
+    "con_p1": "Cole os dados do seu aplicativo",
+    "con_p2": "Autorize e copie o código",
+    "btn_salvar": "Salvar e gerar o link",
+    "btn_conectar": "Conectar",
+}
 
 
 def punitiva(nota, cor):
@@ -77,6 +119,8 @@ def checar(d):
         return falhas, notas
     if [list(c) for c in CASOS] != d.get("casos"):
         falhas.append("lista de casos da Situacao diferente da regra")
+    if d.get("rotulos") != ROTULOS:
+        falhas.append("rotulos da tela diferentes da regra")
     conta = {"forte": 0, "punido": 0, "semnota": 0, "decola": 0}
     for i in it:
         c = cat.get(i["categoria"]) or {}
@@ -196,6 +240,7 @@ def reaplicar(d):
         for g in c.get("gemeas") or []:
             g["mesma_familia"] = bool(c.get("pai") and g.get("pai") == c.get("pai"))
     d["casos"] = [list(x) for x in CASOS]
+    d["rotulos"] = dict(ROTULOS)
     d["regras"] = dict(LIM_ITEM=LIM_ITEM, LIM_CAT=LIM_CAT, JANELA=JANELA,
                        JANELA_RAPIDA=JANELA_RAPIDA, JANELA_ANTIGA=JANELA_ANTIGA, PESO=PESO)
     for r in d.get("reclamacoes") or []:

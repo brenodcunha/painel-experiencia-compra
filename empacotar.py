@@ -21,7 +21,7 @@ LEVA = [
     "index.html", "servidor.py", "coletor.py", "conta.py", "ml.py", "regras.py", "ligar.py",
     "LEIAME.md", "README.md", "REGRAS.md", "AGENTS.md", "CLAUDE.md", ".gitignore", "LICENSE", "empacotar.py",
     # kit de testes LIMPO (projeto publico: quem mexer prova que nao quebrou a regra)
-    "audit/verificar_regras.py", "audit/placar.py", "audit/fixtures/gerar.py",
+    "audit/verificar_regras.py", "audit/verificar_textos.py", "audit/placar.py", "audit/fixtures/gerar.py",
     "audit/AUDITORIA_FINAL.md", "audit/ajuda_ml_31968_experiencia_de_compra.txt",
     "guia/01-login.png", "guia/02-minhas-aplicacoes.png", "guia/03-informacoes-basicas.png",
     "guia/04-redirect-e-fluxos.png", "guia/05-permissoes.png", "guia/06-permissoes-fim.png",
@@ -88,6 +88,11 @@ def main():
     print("conferindo as regras:")
     if not _regras_ok():
         print("PACOTE RECUSADO — regra falhando"); return 3
+    # textos fixos da tela: um so, em regras.ROTULOS (nada escrito na mao no index.html)
+    import importlib
+    vt = importlib.import_module("audit.verificar_textos") if os.path.isdir(os.path.join(BASE, "audit")) else None
+    if vt and vt.main() != 0:
+        print("PACOTE RECUSADO — texto fixo fora do lugar"); return 4
     for a in LEVA:
         if PROIBIDO.search(a.replace(os.sep, "/")):
             print("arquivo proibido na lista:", a); return 2

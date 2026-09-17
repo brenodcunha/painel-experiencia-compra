@@ -215,9 +215,18 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
 
 ## 5. Texto e nomes — o que não pode mudar
 - Nada na tela cita conta, anúncio, categoria ou número de uma conta específica.
-- Rótulos fixos: cards (3.1), chips (3.3 — em `regras.CASOS`), selos (3.5), passos
-  `.01`/`.02` da conexão, botões `Atualizar os anúncios da conta` e `Como criar seu
-  aplicativo no DevCenter`.
+- **Rótulos fixos — moram em `regras.ROTULOS`, a tela só desenha o que vem de lá** (chip da
+  Situação em `regras.CASOS`). `audit/verificar_textos.py` recusa o pacote se um deles for escrito
+  na mão no `index.html` ou sumir desta lista. Mudou uma palavra: muda em `regras.py` **e** aqui.
+  - Botões: `Atualizar os anúncios da conta` · `Como criar seu aplicativo no DevCenter` · `Desconectar esta conta` · `Salvar e gerar o link` · `Conectar` · `Coletar de novo`
+  - Cards: `Perdendo exposição` · `Sem nota ainda` · `Taxa geral` · `Categorias afetadas`
+  - Legenda: `Taxa` · `Nota` · `Situação`
+  - Colunas da tabela: `Anúncio` · `Nota` · `Base` · `Vendas 365d` · `60d` · `Reclam. na base` · `Taxa da base` · `Situação`
+  - Base: `o anúncio` · `a categoria` · `cálculo antigo` · `nenhuma`
+  - Detalhe: `A conta` · `Como cai sozinha` · `Por que essa nota` · `O ML recomenda` · `Reclamações` · `reclamações na base` · `reclamações deste anúncio no ano` · `Abrir no Mercado Livre ↗` · `abrir a venda ↗`
+  - Aba Categorias: `Categoria` · `Vendas 365d` · `Reclam.` · `Taxa` · `Anúncios` · `Notas que está dando` · `Para onde dá para mover` · `contador zerado` · `contador baixo` · `nota boa comprovada` · `dá a nota` · `abaixo de` · `espelho de` · `tem espelho` · `Nenhuma categoria sua está punindo`
+  - Estados vazios e bloqueio: `Nada encontrado com esse filtro.` · `Esta conta não tem nenhum anúncio.` · `Sem dados ainda.` · `O painel não passou na própria conferência`
+  - Conexão: `Conecte a sua conta do Mercado Livre` · `Cole os dados do seu aplicativo` · `Autorize e copie o código`
 - Botão que vira "Conectando…"/"Salvando…" **sempre** volta: `try/catch` + teto de 45 s.
 - Erro de coleta e aviso ficam na linha de status em vermelho até a próxima coleta.
 

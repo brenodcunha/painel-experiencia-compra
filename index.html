@@ -408,8 +408,8 @@ td.det{padding:0;background:#f8fafc}
       <div class="brand"><h1>Experiência de Compra</h1><div class="sub" id="sub"></div>
         <div class="status" id="status" role="status" aria-live="polite"></div></div>
       <div class="spacer"></div>
-      <button type="button" class="pill dark" id="bguia" data-guia hidden>Como criar seu aplicativo no DevCenter</button>
-      <button type="button" class="pill dark" id="att" hidden>Atualizar os anúncios da conta <span class="arr" aria-hidden="true">→</span></button>
+      <button type="button" class="pill dark" id="bguia" data-guia hidden></button>
+      <button type="button" class="pill dark" id="att" hidden></button>
       <div class="euw" id="eu"></div>
     </div>
     <div id="kpis"></div>
@@ -423,6 +423,10 @@ let D=null, filtro='todos', busca='', aberto=null;
 // constantes da regra: vem do dados.json (fonte unica: regras.py); o fallback e so
 // para nao quebrar num dado sem o campo
 const R=()=>Object.assign({LIM_ITEM:100,LIM_CAT:200,JANELA:365,JANELA_RAPIDA:60,JANELA_ANTIGA:180,PESO:60},(D&&D.regras)||{});
+// TEXTOS FIXOS: nunca escritos aqui. Vem de regras.ROTULOS (via dados.json e /api/conta).
+// Chave que nao existe aparece como [chave] — quebra visivel, nunca palavra inventada.
+let C_ROTULOS=null;
+const T=k=>{const r=(D&&D.rotulos)||C_ROTULOS||{}; return r[k]!==undefined?r[k]:'['+k+']';};
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nb=v=>(v==null||v===-1)?'ncinza':'n'+v;
 const nt=v=>(v==null||v===-1)?'cinza':v;
@@ -515,9 +519,9 @@ function linha(i){
       <div class="tt"><b title="${esc(i.titulo)}">${esc(i.titulo)}</b>
       <code translate="no">${i.id}</code> · <code>${esc(i.cat_nome)}</code></div></div></td>
     <td><span class="b ${nb(i.nota)}">${nt(i.nota)}</span></td>
-    <td>${i.ramo==='ITEM'?'<span class="tag neu plain">o anúncio</span>'
-        :i.ramo==='HERDA'?'<span class="tag acc plain">a categoria</span>'
-        :i.ramo==='ANTIGO'?'<span class="tag neu plain">cálculo antigo</span>':'<span class="tag neu plain">nenhuma</span>'}</td>
+    <td>${i.ramo==='ITEM'?`<span class="tag neu plain">${esc(T('base_anuncio'))}</span>`
+        :i.ramo==='HERDA'?`<span class="tag acc plain">${esc(T('base_categoria'))}</span>`
+        :i.ramo==='ANTIGO'?`<span class="tag neu plain">${esc(T('base_antigo'))}</span>`:`<span class="tag neu plain">${esc(T('base_nenhuma'))}</span>`}</td>
     <td class="num">${mil(i.v365)}</td>
     <td class="num muted">${mil(i.v60)}</td>
     <td class="num">${i.reclamacoes||'<span class="muted">0</span>'}</td>
@@ -586,7 +590,7 @@ function detalhe(i){
   const parada = semVenda(i, peso);
   return `<div class="dg" role="region" aria-label="Detalhes de ${esc(i.titulo)}">
     <div class="dbx">
-      <div class="dt"><span class="n">.01</span>A conta</div>
+      <div class="dt"><span class="n">.01</span>${esc(T('det_conta'))}</div>
       ${base.v?`<div class="eq2"><b>${i.reclamacoes}</b><span>reclam. de produto ÷</span>
         <b>${mil(base.v)}</b><span>vendas =</span>
         <span class="tx"><i class="dot ${cs(base.t)}" aria-hidden="true"></i><b>${pc(base.t)}</b></span></div>`
@@ -599,29 +603,29 @@ function detalhe(i){
         ${i.cancelamentos?`<span class="ch ${i.cancelamentos60?'on':''}">${i.cancelamentos} cancelamento${i.cancelamentos>1?'s':''} seu${i.cancelamentos>1?'s':''} no ano${i.cancelamentos60?`<i>${i.cancelamentos60} nos últimos 60 dias</i>`:''}</span>`:''}
         ${parada?`<span class="ch">${parada}</span>`:''}
       </div>
-      ${proj.length?`<div class="dt" style="margin-top:14px"><span class="n">↓</span>Como cai sozinha</div>
+      ${proj.length?`<div class="dt" style="margin-top:14px"><span class="n">↓</span>${esc(T('det_cai'))}</div>
         <div class="pj">${proj.slice(0,5).map(x=>`<span><i>${x.d}d</i>${pc(x.t)}</span>`).join('')}</div>`:''}
       ${i.pode_mover?'<div class="pode"><span class="tag acc">0 vendas: a categoria ainda pode ser trocada</span></div>':''}
       ${i.freeze?'<div class="pode"><span class="tag good">Programa Decola — punição anulada</span></div>':''}
     </div>
     <div class="dbx">
-      <div class="dt"><span class="n">.02</span>Por que essa nota</div>
+      <div class="dt"><span class="n">.02</span>${esc(T('det_porque'))}</div>
       ${(i.motivo||[]).length
         ? i.motivo.map(t=>`<div class="fala">${esc(t)}</div>`).join('')
         : '<div class="muted sm">O Mercado Livre não escreveu nada para este anúncio.</div>'}
       <div class="acao ${A[0]}">${A[1]}</div>
-      ${(i.recomendacoes||[]).length?`<div class="dt" style="margin-top:14px"><span class="n">★</span>O ML recomenda</div>
+      ${(i.recomendacoes||[]).length?`<div class="dt" style="margin-top:14px"><span class="n">★</span>${esc(T('det_recomenda'))}</div>
         ${i.recomendacoes.slice(0,3).map(t=>`<div class="ri">${esc(t)}</div>`).join('')}`:''}
       ${i.up_id?`<a class="lk" target="_blank" rel="noopener"
         href="https://vendedores.mercadolivre.com.br/metricas/${esc(i.up_id)}/experiencia-compra"
-        >Abrir no Mercado Livre ↗</a>`:''}
+        >${esc(T('lnk_ml'))}</a>`:''}
     </div>
     <div class="dbx">
       ${(()=>{
         // sem base (ramo SEM) a lista e a das reclamacoes do PROPRIO anuncio no ano:
         // e o que derruba ele mesmo sem categoria
         const lst = rec.length ? rec : minhas.map(x=>({...x, sai:R().JANELA-x.dias}));
-        const tit = rec.length ? `As ${rec.length} reclamações na base` : minhas.length ? `As ${minhas.length} reclamações deste anúncio no ano` : 'Reclamações';
+        const tit = rec.length ? `As ${rec.length} ${esc(T('det_reclamacoes_base'))}` : minhas.length ? `As ${minhas.length} ${esc(T('det_reclamacoes_anuncio'))}` : esc(T('det_reclamacoes'));
         return `<div class="dt"><span class="n">.03</span>${tit}</div>
       ${lst.length?lst.map((r,k)=>{
         // cada reclamacao abre a VENDA dela no ML (a pagina mostra a reclamacao, o produto e o
@@ -633,7 +637,7 @@ function detalhe(i){
           : `<a class="prod" href="https://produto.mercadolivre.com.br/${esc(String(r.item||'').replace(/^MLB/,'MLB-'))}" target="_blank" rel="noopener">${esc(r.titulo||r.item||'')}</a> <i>(fora da sua lista)</i>`;
         return `<div class="rl${k>=7?' extra':''}"${k>=7?' hidden':''}>
         <div><b>${esc(motivo(r.nome))}</b>
-          ${r.pedido?`<a class="lk2" href="https://www.mercadolivre.com.br/vendas/${esc(r.pedido)}/detalhe" target="_blank" rel="noopener" title="Abrir a venda ${esc(r.pedido)} no Mercado Livre — é preciso estar logado como ${esc((D.conta||{}).nick||'esta conta')} neste navegador">abrir a venda ↗</a>`:''}
+          ${r.pedido?`<a class="lk2" href="https://www.mercadolivre.com.br/vendas/${esc(r.pedido)}/detalhe" target="_blank" rel="noopener" title="Abrir a venda ${esc(r.pedido)} no Mercado Livre — é preciso estar logado como ${esc((D.conta||{}).nick||'esta conta')} neste navegador">${esc(T('lnk_venda'))}</a>`:''}
           <span class="muted">${dm(r.data)} · ${prod}</span></div>
         <div class="num muted">${r.item===i.id?(r.pesa?'<b>pesa agora</b>':'pesa pouco')+' · ':''}sai em ${r.sai}d</div></div>`; }).join('')
         +(lst.length>7?`<button type="button" class="vermais" data-ver="${i.id}"
@@ -660,7 +664,7 @@ function cartaoConta(C){
     if(eu.querySelector('.menu')){ fecha(); return; }
     cx.setAttribute('aria-expanded','true');
     const m=document.createElement('div'); m.className='menu'; m.setAttribute('role','menu');
-    m.innerHTML=`<button type="button" role="menuitem" id="bsair">Desconectar esta conta</button>`;
+    m.innerHTML=`<button type="button" role="menuitem" id="bsair">${esc(T('btn_sair'))}</button>`;
     eu.appendChild(m);
     m.onclick=e=>e.stopPropagation();
     const b=m.querySelector('#bsair'); b.focus();
@@ -696,13 +700,13 @@ function pinta(){
     <div class="lab">${rot}<span class="sel">na tabela ↓</span></div>
     <div class="val">${val}</div><div class="dl">${pe}</div></button>`;
   $('#kpis').innerHTML=`<div class="kpis">
-    ${tile('punidos','Perdendo exposição',pun.length+dor.length,
+    ${tile('punidos',esc(T('card_perdendo')),pun.length+dor.length,
            `${pun.length} no ar · ${dor.length} sem estoque`)}
-    ${tile('semnota','Sem nota ainda',sn.length,
+    ${tile('semnota',esc(T('card_semnota')),sn.length,
            'a regra já daria nota, o ML não calculou')}
-    ${tile('todos','Taxa geral',pc(tx),
+    ${tile('todos',esc(T('card_taxa')),pc(tx),
            `reclamações ÷ vendas · ver todos os ${mil(it.length)}`)}
-    ${tile('categorias','Categorias afetadas',cats.length,
+    ${tile('categorias',esc(T('card_categorias')),cats.length,
            `${comGemea} com destino melhor · de ${mil(todasCats.length)} em que você vende`)}
   </div>`;
 
@@ -714,27 +718,27 @@ function pinta(){
   </div>
   <div class="leg">
     <div class="lg">
-      <div class="lt">Taxa <span>— comparada à sua média de ${pc(tx)}</span></div>
+      <div class="lt">${esc(T('leg_taxa'))} <span>— comparada à sua média de ${pc(tx)}</span></div>
       <div class="lr"><i class="dot good" aria-hidden="true"></i><em>abaixo</em></div>
       <div class="lr"><i class="dot warn" aria-hidden="true"></i><em>acima</em></div>
       <div class="lr"><i class="dot crit" aria-hidden="true"></i><em>o dobro ou mais</em></div>
     </div>
     <div class="lg">
-      <div class="lt">Nota</div>
+      <div class="lt">${esc(T('leg_nota'))}</div>
       <div class="lr"><span class="b n30">30</span><span class="b n65">50 · 65</span><em>tiram exposição</em></div>
       <div class="lr"><span class="b n75">75</span><span class="b n100">100</span><em>não tiram</em></div>
       <div class="lr"><span class="b ncinza">cinza</span><em>sem nota, sem punição</em></div>
     </div>
     <div class="lg">
-      <div class="lt">Situação <span>— os ${(D.casos||[]).length} casos, com a contagem do recorte</span></div>
+      <div class="lt">${esc(T('leg_situacao'))} <span>— os ${(D.casos||[]).length} casos, com a contagem do recorte</span></div>
       ${legendaSituacao(it.filter(x=>filtro==='punidos'?x.ruim:filtro==='semnota'?x.sem_nota:true))}
     </div>
   </div>
   <div class="box"><table aria-label="Anúncios"><thead><tr>
-    <th scope="col">Anúncio</th><th scope="col">Nota</th><th scope="col">Base</th>
-    <th scope="col" class="num">Vendas 365d</th><th scope="col" class="num">60d</th>
-    <th scope="col" class="num">Reclam. na base</th><th scope="col" class="num">Taxa da base</th>
-    <th scope="col">Situação</th>
+    <th scope="col">${esc(T('col_anuncio'))}</th><th scope="col">${esc(T('col_nota'))}</th><th scope="col">${esc(T('col_base'))}</th>
+    <th scope="col" class="num">${esc(T('col_vendas'))}</th><th scope="col" class="num">${esc(T('col_60'))}</th>
+    <th scope="col" class="num">${esc(T('col_recl'))}</th><th scope="col" class="num">${esc(T('col_taxa'))}</th>
+    <th scope="col">${esc(T('col_situacao'))}</th>
   </tr></thead><tbody id="tb"></tbody></table></div>`;
 
   document.querySelectorAll('[data-f]').forEach(function(e){e.onclick=function(){
@@ -764,13 +768,13 @@ function destino(x){
   if(ruins)
     return {...x, serve:false};                 // ja pune la: nunca e saida
   if(!x.vendas365)
-    return {...x, serve:true, classe:'livre', selo:'contador zerado'};
+    return {...x, serve:true, classe:'livre', selo:T('selo_zerado')};
   if(!x.acima_limiar)                           // vende la, mas longe das 200: ainda nao da nota
-    return {...x, serve:true, classe:'livre', selo:`contador baixo · ${mil(x.vendas365)} de ${R().LIM_CAT}`};
+    return {...x, serve:true, classe:'livre', selo:`${T('selo_baixo')} · ${mil(x.vendas365)} de ${R().LIM_CAT}`};
   if(!notas.length)
     return {...x, serve:false};                 // passou das 200 e nao sei a nota: nao arrisco
   // ⚠️ o contador do map NAO pode se chamar `v`: ja atropelou a nota uma vez.
-  return {...x, serve:true, classe:'boa', selo:'nota boa comprovada',
+  return {...x, serve:true, classe:'boa', selo:T('selo_boa'),
           resumo:notas.sort((a,b)=>b[0]-a[0]).map(([k,n])=>k+'×'+n).join(' ')};
 }
 
@@ -780,7 +784,7 @@ function vistaCategorias(cats){
   if(!cats.length) return `
   <div class="vazio">
     <div class="ei" aria-hidden="true">✓</div>
-    <h2>Nenhuma categoria sua está punindo</h2>
+    <h2>${esc(T('vazio_cat'))}</h2>
     <p>Esta lista só mostra categoria que já está dando nota <b>30 ou 65</b> em algum anúncio seu.
       Hoje não há nenhuma. Se uma passar a dar, ela entra aqui sozinha.</p>
   </div>`;
@@ -791,16 +795,16 @@ function vistaCategorias(cats){
     <div>Em <b>Reclam.</b>, "cancel. seus" são vendas que <b>você</b> cancelou na categoria no ano: o Mercado
       Livre conta esse cancelamento na nota (o do comprador e o de mediação, não).${D.cancelamentos_vendedor?` Nesta conta: ${mil(D.cancelamentos_vendedor)} no ano.`:''}</div>
     <div class="defs">
-      <div class="d"><span class="tag neu plain">contador zerado</span>
+      <div class="d"><span class="tag neu plain">${esc(T('selo_zerado'))}</span>
         <span><b>Você nunca vendeu nessa categoria.</b> Ela não tem contador nenhum, então não
           manda nota: o anúncio cai em <i>sem experiência</i> e fica cinza. Cinza não tira
           exposição — é o mesmo lugar de quem está começando.</span></div>
-      <div class="d"><span class="tag neu plain">contador baixo · X de ${R().LIM_CAT}</span>
+      <div class="d"><span class="tag neu plain">${esc(T('selo_baixo'))} · X de ${R().LIM_CAT}</span>
         <span><b>Você já vende lá, mas ainda não chegou nas ${R().LIM_CAT} do ano.</b> Também não manda nota,
           e por isso tem a mesma cor da de cima: as duas levam o anúncio para o cinza. A diferença
           é que este contador está subindo — quando passar das ${R().LIM_CAT}, a nota que ela der passa a
           valer, e aí é o histórico que você fez lá que decide.</span></div>
-      <div class="d"><span class="tag good plain">nota boa comprovada</span>
+      <div class="d"><span class="tag good plain">${esc(T('selo_boa'))}</span>
         <span><b>Já passou das ${R().LIM_CAT}, já manda nota, e todas as notas que ela está dando nos seus
           anúncios são 75 ou 100.</b> Verde porque é o destino mais firme dos três: aqui você não
           está apostando no cinza, está indo para uma nota que já viu funcionar na sua conta. A
@@ -808,17 +812,17 @@ function vistaCategorias(cats){
     </div>
   </div>
   <div class="box"><table class="ct" aria-label="Categorias"><thead><tr>
-    <th scope="col">Categoria</th><th scope="col" class="num">Vendas 365d</th><th scope="col" class="num">Reclam.</th>
-    <th scope="col" class="num">Taxa</th><th scope="col" class="num">Anúncios</th><th scope="col">Notas que está dando</th>
-    <th scope="col">Para onde dá para mover</th>
+    <th scope="col">${esc(T('cat_col_categoria'))}</th><th scope="col" class="num">${esc(T('cat_col_vendas'))}</th><th scope="col" class="num">${esc(T('cat_col_recl'))}</th>
+    <th scope="col" class="num">${esc(T('cat_col_taxa'))}</th><th scope="col" class="num">${esc(T('cat_col_anuncios'))}</th><th scope="col">${esc(T('cat_col_notas'))}</th>
+    <th scope="col">${esc(T('cat_col_mover'))}</th>
   </tr></thead><tbody>
   ${cats.map(c=>`<tr>
     <td><span class="nm">${esc(c.nome||c.id)}</span>
       <span class="cm" title="${esc(c.caminho||'')}">${caminho(c.caminho)}</span>
       <code translate="no">${c.id}</code>
-      ${c.acima_limiar?'<span class="tag acc plain">dá a nota</span>':`<span class="tag neu plain">abaixo de ${R().LIM_CAT}</span>`}
-      ${c.papel==='espelho'?`<span class="tag neu plain" title="o Mercado Livre marca esta categoria como espelho de ${esc(c.mestre||'')}">espelho de ${esc(c.mestre||'')}</span>`
-       :c.papel==='mestre'?'<span class="tag neu plain">tem espelho</span>':''}</td>
+      ${c.acima_limiar?`<span class="tag acc plain">${esc(T('tag_da_nota'))}</span>`:`<span class="tag neu plain">${esc(T('tag_abaixo'))} ${R().LIM_CAT}</span>`}
+      ${c.papel==='espelho'?`<span class="tag neu plain" title="o Mercado Livre marca esta categoria como espelho de ${esc(c.mestre||'')}">${esc(T('tag_espelho_de'))} ${esc(c.mestre||'')}</span>`
+       :c.papel==='mestre'?`<span class="tag neu plain">${esc(T('tag_tem_espelho'))}</span>`:''}</td>
     <td class="num">${mil(c.vendas365)}<br><span class="muted" style="font-size:12px">${mil(c.vendas60)} em 60d</span></td>
     <td class="num">${c.reclamacoes||'<span class="muted">0</span>'}
       ${(()=>{const g=c.grupos||{},o=(g.ARREPENDIMENTO||0)+(g.ENTREGA||0);
@@ -861,7 +865,7 @@ function tabela(){
   // fica sob controle por `content-visibility:auto` nas linhas (ver CSS), que
   // pula o layout das que estao fora da tela sem precisar de biblioteca.
   $('#tb').innerHTML=l.map(linha).join('')
-    ||('<tr><td colspan="8" class="vazio">'+(D.itens.length?'Nada encontrado com esse filtro.':'Esta conta não tem nenhum anúncio.')+'</td></tr>');
+    ||('<tr><td colspan="8" class="vazio">'+esc(D.itens.length?T('vazio_filtro'):T('vazio_conta'))+'</td></tr>');
   const alterna=(id,foco)=>{
     aberto = aberto===id ? null : id; tabela();
     if(foco){ const b=document.querySelector(`tr.ln[data-id="${id}"] .exp`); if(b) b.focus(); }
@@ -932,9 +936,9 @@ function abreGuia(){
   if(document.querySelector('.gd')) return;
   const d=document.createElement('div');
   d.className='gd'; d.setAttribute('role','dialog'); d.setAttribute('aria-modal','true');
-  d.setAttribute('aria-label','Como criar seu aplicativo no DevCenter');
+  d.setAttribute('aria-label',T('btn_guia'));
   d.innerHTML='<div class="gdx">'
-    +'<div class="gdt"><h2>Como criar seu aplicativo no DevCenter'
+    +'<div class="gdt"><h2>'+esc(T('btn_guia'))
     +'<span class="sb">10 passos, com a tela de cada um. Leva uns 5 minutos \u2014 testado criando um aplicativo do zero.</span></h2>'
     +'<button type="button" class="gdf" id="gfech" aria-label="Fechar o guia">&#10005;</button></div>'
     +'<div class="gdc">'+PASSOS.map(function(x){
@@ -982,12 +986,12 @@ function telaLogin(C, erro){
   $('#kpis').innerHTML = '';
   if($('#eu')) $('#eu').innerHTML='';
   $('#app').innerHTML = `<div class="setup">
-    <h2>Conecte a sua conta do Mercado Livre</h2>
+    <h2>${esc(T('con_titulo'))}</h2>
     <div class="sub2">O token fica só neste computador, no arquivo <code>conta.json</code>
       — nada é enviado para lugar nenhum.${C.pacote?` <span class="muted">Painel v${esc(C.pacote)}.</span>`:''}</div>
 
     <div class="passo2 ${passo>1?'feito':''}" id="p1">
-      <span class="n2">.01</span><h3>Cole os dados do seu aplicativo</h3>
+      <span class="n2">.01</span><h3>${esc(T('con_p1'))}</h3>
       ${passo>1?`<button type="button" class="reabrir" id="p1edit">\u2713 salvo \u2014 alterar</button>`:''}
       <div class="campo"><label for="fa">App ID</label>
         <input id="fa" name="app_id" inputmode="numeric" autocomplete="off" spellcheck="false"
@@ -1005,11 +1009,11 @@ function telaLogin(C, erro){
         <a class="onde" id="lredir" href="https://developers.mercadolivre.com.br/devcenter"
            target="_blank" rel="noopener">Abrir onde cadastrei o redirect ↗</a>
         <span class="dica">na página que abrir, clique em <b>Continuar</b> — o campo fica logo abaixo</span></div>
-      <div class="campo"><button type="button" class="pill dark" id="bapp">Salvar e gerar o link <span class="arr" aria-hidden="true">→</span></button></div>
+      <div class="campo"><button type="button" class="pill dark" id="bapp">${esc(T('btn_salvar'))} <span class="arr" aria-hidden="true">→</span></button></div>
     </div>
 
     <div class="passo2 ${passo<2?'off':''}">
-      <span class="n2">.02</span><h3>Autorize e copie o código</h3>
+      <span class="n2">.02</span><h3>${esc(T('con_p2'))}</h3>
       <div class="ajuda">
         ${C.url?`<a class="lk" href="${esc(C.url)}" target="_blank" rel="noopener"><b>Abrir a autorização no Mercado Livre ↗</b></a><br>`
                :'Salve o passo 1 para liberar o link.<br>'}
@@ -1020,7 +1024,7 @@ function telaLogin(C, erro){
       <div class="campo"><label for="fc">Cole aqui o código (de <code>TG-</code> em diante)</label>
         <input id="fc" name="codigo" autocomplete="off" spellcheck="false"
           placeholder="TG-68c1a4…-123456789"></div>
-      <div class="campo"><button type="button" class="pill dark" id="bcod">Conectar <span class="arr" aria-hidden="true">→</span></button></div>
+      <div class="campo"><button type="button" class="pill dark" id="bcod">${esc(T('btn_conectar'))} <span class="arr" aria-hidden="true">→</span></button></div>
       ${erro?`<div class="erro" role="alert">${esc(erro)}</div>`:''}
     </div>
 
@@ -1107,6 +1111,7 @@ function conferir(D){
   }
   const casos=new Set((D.casos||[]).map(c=>c[0]));
   if(!casos.size) p.push('lista de casos da Situação ausente');
+  if(!D.rotulos) p.push('textos fixos da tela ausentes');
   let forte=0,punido=0,semnota=0,decola=0,pune=0,dorm=0,sn=0,frz=0;
   for(const i of D.itens||[]){
     const s=i.situacao;
@@ -1126,12 +1131,12 @@ function bloqueia(p){
   $('#sub').innerHTML=`<b>${esc((D.conta||{}).nick||'')}</b> · ${esc(D.quando||'')}${D.pacote?` · painel v${esc(D.pacote)}`:''}`;
   $('#app').innerHTML=`<div class="vazio">
     <div class="ei ruim" aria-hidden="true">!</div>
-    <h2>O painel não passou na própria conferência</h2>
+    <h2>${esc(T('bloqueio_titulo'))}</h2>
     <p>Antes de mostrar qualquer número, o painel confere os dados contra as regras.
       Desta vez ${p.length===1?'uma conferência falhou':p.length+' conferências falharam'} — então ele
       não mostra nada, para não mostrar errado.</p>
     <ul class="falhas">${p.slice(0,12).map(x=>`<li>${esc(x)}</li>`).join('')}${p.length>12?`<li>… e mais ${p.length-12}</li>`:''}</ul>
-    <p><button type="button" class="pill dark" id="denovo">Coletar de novo <span class="arr" aria-hidden="true">→</span></button></p>
+    <p><button type="button" class="pill dark" id="denovo">${esc(T('btn_denovo'))} <span class="arr" aria-hidden="true">→</span></button></p>
     <p class="muted sm">Se falhar de novo, mande o texto acima e a versão (painel v${esc(D.pacote||'?')}) para quem te passou o painel.</p>
   </div>`;
   $('#denovo').onclick=function(){ carrega(true); };
@@ -1150,6 +1155,9 @@ let reparo=0;
 async function carrega(f, automatico){
   if(!automatico) reparo=0;
   const C = await (await fetch('/api/conta')).json();
+  C_ROTULOS = C.rotulos || C_ROTULOS;
+  $('#bguia').textContent = T('btn_guia');
+  $('#att').innerHTML = esc(T('btn_atualizar'))+' <span class="arr" aria-hidden="true">→</span>';
   C_AVISO = C.aviso || null;
   topo(C.ligado);
   if(!C.ligado) return telaLogin(C);
@@ -1188,8 +1196,8 @@ async function carrega(f, automatico){
     }
     if(precisa){
       $('#kpis').innerHTML='';
-      $('#app').innerHTML='<div class="vazio">'+(D.vazio?'Sem dados ainda.':'Os dados salvos são de uma versão anterior do painel.')
-        +' Clique em <b>Atualizar os anúncios da conta</b>.</div>';
+      $('#app').innerHTML='<div class="vazio">'+(D.vazio?esc(T('vazio_dados')):'Os dados salvos são de uma versão anterior do painel.')
+        +' Clique em <b>'+esc(T('btn_atualizar'))+'</b>.</div>';
       return;
     }
     bloqueia(prob); return;

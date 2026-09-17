@@ -92,7 +92,7 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, open(os.path.join(BASE, "index.html"), "rb").read(),
                               "text/html; charset=utf-8")
         if p == "/api/conta":
-            return self._send(200, dict(conta.estado(), pacote=regras.PACOTE))
+            return self._send(200, dict(conta.estado(), pacote=regras.PACOTE, rotulos=regras.ROTULOS))
         if p == "/api/dados":
             d = coletor.carrega()
             # ⚠️ dados de OUTRA conta: trocar de conta (ou passar a pasta adiante) deixava
