@@ -49,7 +49,8 @@ _ap = os.path.join(BASE, "audit", "apelidos.txt")
 if os.path.isfile(_ap):
     _nomes = [l.strip() for l in io.open(_ap, encoding="utf-8") if l.strip()]
     if _nomes:
-        VAZAMENTO["apelido de conta"] = "|".join(r"\b" + re.escape(n) + r"\b" for n in _nomes)
+        # sem \b de proposito: nome colado num sublinhado ("p0_NOME.json") passava, porque "_" conta como letra
+        VAZAMENTO["apelido de conta"] = "(?i)" + "|".join(re.escape(n) for n in _nomes)
 # exemplos didaticos que o guia usa de proposito e nao sao dado real
 EXEMPLOS_OK = {"1234567890123456", "voce@email.com"}
 
