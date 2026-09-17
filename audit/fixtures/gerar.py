@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Gera as fixtures: contas sinteticas no formato do dados.json (versao 4).
+"""Gera as fixtures: contas sinteticas no formato do dados.json (a versao vem de regras.VERSAO).
 
     python audit/fixtures/gerar.py
 
