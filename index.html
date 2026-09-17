@@ -840,8 +840,8 @@ function vistaCategorias(cats){
         <b>${esc(x.nome||x.id)}</b> <code translate="no">${x.id}</code>
         <span class="tag ${x.classe==='livre'?'neu':'good'} plain"
           style="font-size:11px;padding:2px 8px">${x.selo}</span>
-        ${x.papel==='espelho_meu'?'<span class="tag neu plain" style="font-size:11px;padding:2px 8px">espelho desta</span>'
-         :x.papel==='minha_mestre'?'<span class="tag neu plain" style="font-size:11px;padding:2px 8px">a mestre desta</span>'
+        ${x.papel==='espelho_meu'?`<span class="tag neu plain" style="font-size:11px;padding:2px 8px">${esc(T('tag_espelho_desta'))}</span>`
+         :x.papel==='minha_mestre'?`<span class="tag neu plain" style="font-size:11px;padding:2px 8px">${esc(T('tag_mestre_desta'))}</span>`
          :''}
         <span class="cam" title="${esc(x.caminho||'')}">${caminho(x.caminho)}</span>
         ${x.classe==='boa'?`<span class="cam">${mil(x.vendas365)} vendas suas lá · taxa ${pc(x.taxa)} · notas ${x.resumo}</span>`:''}

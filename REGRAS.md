@@ -224,7 +224,7 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
   - Colunas da tabela: `Anúncio` · `Nota` · `Base` · `Vendas 365d` · `60d` · `Reclam. na base` · `Taxa da base` · `Situação`
   - Base: `o anúncio` · `a categoria` · `cálculo antigo` · `nenhuma`
   - Detalhe: `A conta` · `Como cai sozinha` · `Por que essa nota` · `O ML recomenda` · `Reclamações` · `reclamações na base` · `reclamações deste anúncio no ano` · `Abrir no Mercado Livre ↗` · `abrir a venda ↗`
-  - Aba Categorias: `Categoria` · `Vendas 365d` · `Reclam.` · `Taxa` · `Anúncios` · `Notas que está dando` · `Para onde dá para mover` · `contador zerado` · `contador baixo` · `nota boa comprovada` · `dá a nota` · `abaixo de` · `espelho de` · `tem espelho` · `Nenhuma categoria sua está punindo`
+  - Aba Categorias: `Categoria` · `Vendas 365d` · `Reclam.` · `Taxa` · `Anúncios` · `Notas que está dando` · `Para onde dá para mover` · `contador zerado` · `contador baixo` · `nota boa comprovada` · `dá a nota` · `abaixo de` · `espelho de` · `tem espelho` · `espelho desta` · `a mestre desta` · `Nenhuma categoria sua está punindo`
   - Estados vazios e bloqueio: `Nada encontrado com esse filtro.` · `Esta conta não tem nenhum anúncio.` · `Sem dados ainda.` · `O painel não passou na própria conferência`
   - Conexão: `Conecte a sua conta do Mercado Livre` · `Cole os dados do seu aplicativo` · `Autorize e copie o código`
 - Botão que vira "Conectando…"/"Salvando…" **sempre** volta: `try/catch` + teto de 45 s.

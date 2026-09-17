@@ -63,6 +63,7 @@ ROTULOS = {
     "selo_zerado": "contador zerado", "selo_baixo": "contador baixo", "selo_boa": "nota boa comprovada",
     "tag_da_nota": "dá a nota", "tag_abaixo": "abaixo de",
     "tag_espelho_de": "espelho de", "tag_tem_espelho": "tem espelho",
+    "tag_espelho_desta": "espelho desta", "tag_mestre_desta": "a mestre desta",
     "vazio_cat": "Nenhuma categoria sua está punindo",
     "vazio_filtro": "Nada encontrado com esse filtro.",
     "vazio_conta": "Esta conta não tem nenhum anúncio.",
