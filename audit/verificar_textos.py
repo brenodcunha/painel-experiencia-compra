@@ -16,7 +16,8 @@ import regras
 ESTRITOS = ("btn_atualizar", "btn_guia", "btn_sair", "card_perdendo", "card_semnota", "card_taxa",
             "card_categorias", "col_recl", "col_taxa", "col_vendas", "det_porque", "det_cai",
             "det_recomenda", "det_reclamacoes_base", "det_reclamacoes_anuncio", "lnk_ml", "lnk_venda",
-            "cat_col_notas", "cat_col_mover", "selo_zerado", "selo_boa", "tag_espelho_desta", "tag_mestre_desta", "vazio_cat", "vazio_filtro",
+            "cat_col_notas", "cat_col_mover", "selo_zerado", "selo_boa", "selo_favor", "selo_ml_cobriu",
+            "tag_espelho_desta", "tag_mestre_desta", "vazio_cat", "vazio_filtro",
             "vazio_conta", "bloqueio_titulo", "con_titulo", "con_p1", "con_p2")
 
 
@@ -34,6 +35,10 @@ def main():
     for k, v in regras.ROTULOS.items():
         if ('`%s`' % v) not in regs:
             falhas.append('REGRAS.md nao lista o rotulo `%s` (%s)' % (v, k))
+    # 3b. a tela desenha o formato regras.VERSAO — numero repetido no index.html, conferido aqui
+    m = re.search(r"const VERSAO_DADOS=(\d+)", html)
+    if not m or int(m.group(1)) != regras.VERSAO:
+        falhas.append('index.html VERSAO_DADOS=%s, regras.VERSAO=%s' % (m.group(1) if m else None, regras.VERSAO))
     # 3. chave pedida pela tela existe
     for k in sorted(set(re.findall(r"T\('([a-z0-9_]+)'\)", html))):
         if k not in regras.ROTULOS:

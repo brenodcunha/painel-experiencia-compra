@@ -7,18 +7,41 @@ a sua taxa, a nota publicada e se ela esta punindo.
 NAO preve nota: a media dos concorrentes nao existe em nenhuma rota da API.
 A regra completa e as medicoes estao na docstring do coletor.py.
 """
-import importlib, json, os, sys, threading, urllib.parse
+import importlib, json, os, subprocess, sys, threading, time, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
-import coletor, conta, regras
+import atualizador, coletor, conta, regras
 
 PORTA = 8796
 _estado = {"msg": "", "rodando": False, "erro": None}
 ORIGENS = {"http://localhost:%d" % 8796, "http://127.0.0.1:%d" % 8796}
 _lock = threading.Lock()
+
+
+def _checa_atualizacao():
+    """A cada 6 h confere o repositorio publico (atualizador.py). A tela le o resultado em
+    /api/conta (sem esperar a rede) e, se ha versao nova, pede a troca em /api/atualizar_painel."""
+    while True:
+        try:
+            atualizador.verificar(forcar=True)
+        except Exception:
+            pass
+        time.sleep(atualizador.INTERVALO)
+
+
+def _sair(depois, religar):
+    """Encerra este processo (a versao velha fica na memoria). Com `religar`, deixa o ligar.py
+    --reiniciar subindo o servidor de novo com os arquivos novos; sem, quem chamou (ligar.py) sobe."""
+    if religar:
+        flags = ({"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)}
+                 if os.name == "nt" else {"start_new_session": True})
+        log = open(os.path.join(BASE, "servidor.log"), "a", encoding="utf-8")
+        subprocess.Popen([sys.executable, os.path.join(BASE, "ligar.py"), "--reiniciar"], cwd=BASE, stdout=log, stderr=log, **flags)
+    time.sleep(depois)                # a resposta HTTP ja foi escrita; da tempo de sair pelo socket
+    os._exit(0)
 
 
 def _prog(s):
@@ -37,6 +60,7 @@ def _coletar():
         # guarda na memoria a versao que existia quando ele subiu: em 14/09/2026
         # um servidor no ar havia 2 dias regravou o dados.json no formato velho
         # quando o botao "atualizar" foi clicado, e o painel quebrou.
+        importlib.reload(regras)          # a regra tambem: o coletor recarregado importa daqui
         importlib.reload(coletor)
         coletor.coleta(_prog)
     except Exception as e:
@@ -92,7 +116,8 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, open(os.path.join(BASE, "index.html"), "rb").read(),
                               "text/html; charset=utf-8")
         if p == "/api/conta":
-            return self._send(200, dict(conta.estado(), pacote=regras.PACOTE, rotulos=regras.ROTULOS))
+            return self._send(200, dict(conta.estado(), pacote=regras.PACOTE, rotulos=regras.ROTULOS,
+                                        atualizacao=atualizador.ultimo()))
         if p == "/api/dados":
             d = coletor.carrega()
             # ⚠️ dados de OUTRA conta: trocar de conta (ou passar a pasta adiante) deixava
@@ -148,6 +173,18 @@ class H(BaseHTTPRequestHandler):
             # o erro da coleta ia para o log e a tela apagava a mensagem:
             # falha silenciosa. Agora volta na resposta.
             return self._send(200, {"ok": not _estado["erro"], "erro": _estado["erro"]})
+        if p == "/api/atualizar_painel":
+            # a tela viu versao nova em /api/conta e pede a troca; depois o servidor se reinicia
+            if _estado["rodando"]:
+                return self._send(200, {"erro": "espere a atualização dos anúncios terminar"})
+            ok, msg = atualizador.atualizar()
+            if ok:
+                threading.Thread(target=_sair, args=(0.6, True), daemon=True).start()
+            return self._send(200, {"ok": ok, "msg": msg, "erro": None if ok else msg})
+        if p == "/api/reiniciar":
+            # o ligar.py trocou os arquivos com o servidor no ar e vai subir o novo ele mesmo
+            threading.Thread(target=_sair, args=(0.4, False), daemon=True).start()
+            return self._send(200, {"ok": True})
         if p == "/api/app":
             d = self._corpo()
             falta = [k for k in ("app_id", "secret", "redirect") if not (d.get(k) or "").strip()]
@@ -167,4 +204,5 @@ class H(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     print("\n  http://localhost:%d\n" % PORTA, flush=True)
+    threading.Thread(target=_checa_atualizacao, daemon=True).start()
     ThreadingHTTPServer(("127.0.0.1", PORTA), H).serve_forever()

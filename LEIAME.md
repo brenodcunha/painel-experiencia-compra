@@ -20,12 +20,17 @@ Nada é enviado para lugar nenhum.
 Para fechar, feche a janela do terminal.
 
 ## Como atualizar para uma versão nova
-Quando receber um zip novo, **descompacte por cima da pasta antiga**, substituindo os
-arquivos. Sua conexão (`conta.json`) e seus dados (`dados.json`) ficam onde estão —
-o zip nunca traz esses dois. Na primeira abertura, se o formato dos dados mudou, o painel
-**refaz a leitura da conta sozinho** — é assim que uma versão nova recalcula tudo. A versão aparece ao lado do nome da conta (`painel v` + número): é ela que
-você informa se pedir ajuda.
+Sozinho. Toda vez que você abre o painel (`ligar.py`), e a cada 6 horas com ele aberto, ele
+confere o repositório público do painel; se há versão nova, baixa, troca os arquivos e
+reinicia — você vê "Atualizando o painel para a versão X…" e a tela volta já na nova. Sua
+conexão (`conta.json`) e seus dados (`dados.json`) nunca são tocados. Se o formato dos dados
+mudou, o painel **refaz a leitura da conta sozinho**. Sem internet, ele segue na versão que
+está. A versão aparece ao lado do nome da conta (`painel v` + número): é ela que você informa
+se pedir ajuda.
 
+Se preferir à mão (ou numa versão antiga, anterior à 1.7, que ainda não se atualiza sozinha):
+feche o painel (a janela preta do `ligar.py`), descompacte o zip novo por cima da pasta
+antiga e abra de novo com `ligar.py`.
 ## Primeira vez: conectar a sua conta
 Na tela inicial, clique em **Como criar seu aplicativo no DevCenter** no topo. São 10
 telas, com a imagem de cada uma e os pontos que costumam travar. Leva uns 5 minutos.
@@ -53,6 +58,9 @@ números — nunca um painel errado.
   no anúncio, 200 na categoria), o texto dele explicando a nota, **o que está
   segurando a nota** — reclamação do próprio anúncio (e se ela ainda pesa: uma
   reclamação pesa forte por 60 dias) ou a categoria — e as reclamações uma a uma.
+- Reclamação que **você ganhou** ou que **o Mercado Livre cobriu** do próprio bolso aparece na
+  lista com o selo *não conta* — medido em quatro contas, ela não mexe na nota. A cada
+  *Atualizar* o painel relê o desfecho: o que fechou a seu favor sai da conta sozinho.
 - Se o anúncio não vende há tempo, o painel avisa: o Mercado Livre só refaz a nota
   quando ele vender.
 - Vendas que **você** cancelou aparecem por anúncio e por categoria: o Mercado Livre conta esse

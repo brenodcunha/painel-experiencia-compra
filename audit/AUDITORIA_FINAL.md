@@ -95,3 +95,11 @@ fixtures e no dado real, sem dado de conta dentro. Pronto para distribuir.
 - **v1.5** — 58 textos fixos da tela em `regras.ROTULOS`; `audit/verificar_textos.py` no
   portão do empacotador; varredura de apelido sem limite de palavra. 9 fixtures (+ a quebrada),
   42 arquivos no pacote.
+- **v1.6** — reclamação de produto fechada a favor do vendedor ou coberta pelo ML fica na lista com
+  selo e sai da conta (medido em 4 contas: não pesa na nota; `audit/passo0_medicoes.md`). Formato 7 →
+  recoleta sozinho. `checar` cruza `r365`/`r60` de cada anúncio com a lista. O servidor recarrega
+  `regras.py` junto com o coletor a cada coleta. 10 fixtures (+ a quebrada).
+- **v1.7** — atualização automática (`atualizador.py`): `ligar.py` e o servidor (a cada 6 h) conferem o
+  repositório público; versão nova é baixada, conferida (versão, lista fechada, compila) e trocada
+  arquivo a arquivo, nunca `conta.json`/`dados.json`; o servidor se reinicia sozinho. Testado com um
+  repositório falso local (`PAINEL_ORIGEM`). `VERSAO_DADOS` no `index.html` conferido pelo empacotador.

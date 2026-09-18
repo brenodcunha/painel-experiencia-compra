@@ -419,7 +419,10 @@ td.det{padding:0;background:#f8fafc}
 
 <script>
 const $=s=>document.querySelector(s);
+// memoria desta aba (sessionStorage pode nao existir: modo privado etc.) — nunca quebra a tela
+const lembra=(k,v)=>{ try{ if(v===undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k,v); }catch(e){ return null; } };
 let D=null, filtro='todos', busca='', aberto=null;
+const VERSAO_DADOS=7;   // formato do dados.json que esta tela desenha = regras.VERSAO (o empacotador confere)
 // constantes da regra: vem do dados.json (fonte unica: regras.py); o fallback e so
 // para nao quebrar num dado sem o campo
 const R=()=>Object.assign({LIM_ITEM:100,LIM_CAT:200,JANELA:365,JANELA_RAPIDA:60,JANELA_ANTIGA:180,PESO:60},(D&&D.regras)||{});
@@ -475,22 +478,28 @@ function info(i){
   const c=D.categorias.find(x=>x.id===i.categoria)||{};
   const jan=i.janela||365;
   // as reclamacoes que estao DENTRO da base desta nota (60, 180 ou 365 dias)
+  // a lista traz TODAS as de produto; `conta` diz se entra na conta. A que o vendedor
+  // ganhou ou o ML cobriu fica na lista com selo, fora da conta (medido: nao pesa).
+  // As que contam vem primeiro, na ordem em que saem da janela.
   const rec=(D.reclamacoes||[]).filter(x=> i.ramo==='HERDA'
       ? (x.categoria===i.categoria && x.dias<=jan)
       : (i.ramo==='ITEM'||i.ramo==='ANTIGO') ? (x.item===i.id && x.dias<=jan) : false)
     .map(x=>({...x, sai: jan-x.dias}))
-    .sort((a,b)=>a.sai-b.sai);
+    .sort((a,b)=>(b.conta?1:0)-(a.conta?1:0) || a.sai-b.sai);
+  const recContam=rec.filter(x=>x.conta);
   // as do PROPRIO anuncio no ano: sao elas que derrubam so ele (medido: 98% dos
   // pares na mesma categoria), e pesam forte por `peso` dias
   const peso=R().PESO;
-  const minhas=(D.reclamacoes||[]).filter(x=>x.item===i.id && x.dias<=R().JANELA).sort((a,b)=>a.dias-b.dias);
+  const todas=(D.reclamacoes||[]).filter(x=>x.item===i.id && x.dias<=R().JANELA).sort((a,b)=>a.dias-b.dias);
+  const minhas=todas.filter(x=>x.conta);
+  const favor=todas.length-minhas.length;
   const pesam=minhas.filter(x=>x.dias<=peso).length;
   const base = i.ramo==='ITEM' ? {qual:'o próprio anúncio', jan:jan+' dias'}
              : i.ramo==='HERDA'? {qual:'a categoria '+(i.cat_nome||''), jan:R().JANELA+' dias'}
              : i.ramo==='ANTIGO'? {qual:'o cálculo antigo', jan:R().JANELA_ANTIGA+' dias'}
              : {qual:null, jan:null};
   base.v=i.base_vendas; base.t=i.taxa;
-  return {c:c, rec:rec, base:base, minhas:minhas, pesam:pesam, peso:peso};
+  return {c:c, rec:rec, recContam:recContam, base:base, minhas:minhas, todas:todas, favor:favor, pesam:pesam, peso:peso};
 }
 
 // A SITUACAO VEM PRONTA DO COLETOR (regras.py) — a tela nao classifica nada.
@@ -540,10 +549,14 @@ function semVenda(i, peso){
 }
 // UMA frase dizendo o que esta segurando a nota — e o que muda isso.
 function acao(i,o){
-  const minhas=o.minhas, pesam=o.pesam, peso=o.peso;
+  const minhas=o.minhas, pesam=o.pesam, peso=o.peso, favor=o.favor;
   const parada = semVenda(i, peso);
   const soVendendo = parada ? ` Este anúncio <b>${parada}</b> — o Mercado Livre só refaz a nota quando ele vender.` : '';
   const pl=n=>n>1?'reclamações':'reclamação';
+  // fechada a seu favor / o ML cobriu: existe, mas nao pesa (medido) — dita, nao escondida
+  const semPeso = !favor ? '' : favor===1
+    ? ' <b>Uma</b> reclamação deste anúncio foi fechada a seu favor ou coberta pelo Mercado Livre e não conta.'
+    : ` Outras <b>${favor}</b> reclamações deste anúncio foram fechadas a seu favor ou cobertas pelo Mercado Livre e não contam.`;
   if(i.freeze) return ['good','Programa Decola: a nota continua, mas a punição está anulada enquanto o programa durar.'];
   if(i.nota==null||i.nota===-1){
     if(i.ramo==='ANTIGO') return ['good',`Cinza no cálculo antigo: sem vendas nos últimos ${R().JANELA_ANTIGA} dias. Cinza não tira exposição.`];
@@ -559,21 +572,21 @@ function acao(i,o){
   // nunca derrubou um anuncio sozinho — entra como fator, nao como veredito
   const canc = i.cancelamentos ? ` Você também cancelou <b>${i.cancelamentos}</b> venda${i.cancelamentos>1?'s':''} dele no ano — o Mercado Livre conta cancelamento feito pelo vendedor.` : '';
   if(i.ruim){
-    if(pesam) return ['crit',`<b>${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}</b> — reclamação pesa forte por ${peso} dias e depois vai perdendo peso. A mais nova deixa de pesar em <b>${peso-minhas[0].dias} dias</b>.${canc}${soVendendo}`];
-    if(minhas.length) return ['warn',`${minhas.length===1?'A única reclamação deste anúncio já passou':`As ${minhas.length} reclamações deste anúncio já passaram`} de ${peso} dias e pesa${minhas.length===1?'':'m'} pouco. O que segura a nota é ${daBase}.${soVendendo}`];
-    return ['warn',`Nenhuma reclamação neste anúncio no ano. O que segura a nota é ${daBase}.${canc}${soVendendo}`];
+    if(pesam) return ['crit',`<b>${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}</b> — reclamação pesa forte por ${peso} dias e depois vai perdendo peso. A mais nova deixa de pesar em <b>${peso-minhas[0].dias} dias</b>.${canc}${semPeso}${soVendendo}`];
+    if(minhas.length) return ['warn',`${minhas.length===1?'A única reclamação deste anúncio já passou':`As ${minhas.length} reclamações deste anúncio já passaram`} de ${peso} dias e pesa${minhas.length===1?'':'m'} pouco. O que segura a nota é ${daBase}.${semPeso}${soVendendo}`];
+    return ['warn',`Nenhuma reclamação${favor?' que conte':''} neste anúncio no ano. O que segura a nota é ${daBase}.${canc}${semPeso}${soVendendo}`];
   }
   if(i.nota===75){
-    if(pesam) return ['warn',`75 não tira exposição, mas ${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}. Sem reclamação nova, tende a voltar a 100 depois de ${peso} dias${parada?' — quando vender':''}.`];
-    return ['good',`75 não tira exposição.${minhas.length?(minhas.length===1?` A reclamação deste anúncio já passou de ${peso} dias.`:` As reclamações deste anúncio já passaram de ${peso} dias.`):''}${soVendendo}`];
+    if(pesam) return ['warn',`75 não tira exposição, mas ${pesam} ${pl(pesam)} neste anúncio ainda pesa${pesam>1?'m':''}. Sem reclamação nova, tende a voltar a 100 depois de ${peso} dias${parada?' — quando vender':''}.${semPeso}`];
+    return ['good',`75 não tira exposição.${minhas.length?(minhas.length===1?` A reclamação deste anúncio já passou de ${peso} dias.`:` As reclamações deste anúncio já passaram de ${peso} dias.`):''}${semPeso}${soVendendo}`];
   }
-  return ['good', minhas.length?`Nota 100. ${minhas.length} ${pl(minhas.length)} no ano não derrubaram a nota.`:'Nota 100, nenhuma reclamação neste anúncio no ano.'];
+  return ['good', (minhas.length?`Nota 100. ${minhas.length} ${pl(minhas.length)} no ano não derrubaram a nota.`:`Nota 100, nenhuma reclamação${favor?' que conte':''} neste anúncio no ano.`)+semPeso];
 }
 
 function detalhe(i){
-  const o=info(i), c=o.c, rec=o.rec, base=o.base, minhas=o.minhas, pesam=o.pesam, peso=o.peso;
-  let n=rec.length;
-  const proj=rec.map(r=>{n--;return {d:r.sai,t:base.v?100*n/base.v:null}});
+  const o=info(i), c=o.c, rec=o.rec, recContam=o.recContam, base=o.base, minhas=o.minhas, favor=o.favor, pesam=o.pesam, peso=o.peso;
+  let n=recContam.length;
+  const proj=recContam.map(r=>{n--;return {d:r.sai,t:base.v?100*n/base.v:null}});
   const g=(i.ramo==='HERDA'?i.grupos_cat:i.grupos)||{};
   const fora=(g.ARREPENDIMENTO||0)+(g.ENTREGA||0);
   const A=acao(i,o);
@@ -599,6 +612,7 @@ function detalhe(i){
       ${(ml.vendas!=null||ml.reclamacoes!=null)?`<div class="muted sm">O Mercado Livre contou: <b>${ml.vendas==null?'?':ml.vendas}</b> vendas e <b>${ml.problemas!=null?ml.problemas:(ml.reclamacoes==null?'?':ml.reclamacoes)}</b> problemas${ml.de?` (${dm(ml.de)} a ${dm(ml.ate)})`:''}.</div>`:''}
       <div class="chips">
         <span class="ch ${pesam?'on':''}">${minhas.length} neste anúncio no ano${pesam?`<i>${pesam} ainda pesa${pesam>1?'m':''}</i>`:''}</span>
+        ${favor?`<span class="ch">${favor} não ${favor>1?'contam':'conta'} <i>a seu favor / o Mercado Livre cobriu</i></span>`:''}
         ${fora?`<span class="ch">${fora} não contam <i>arrependimento / entrega</i></span>`:''}
         ${i.cancelamentos?`<span class="ch ${i.cancelamentos60?'on':''}">${i.cancelamentos} cancelamento${i.cancelamentos>1?'s':''} seu${i.cancelamentos>1?'s':''} no ano${i.cancelamentos60?`<i>${i.cancelamentos60} nos últimos 60 dias</i>`:''}</span>`:''}
         ${parada?`<span class="ch">${parada}</span>`:''}
@@ -624,8 +638,11 @@ function detalhe(i){
       ${(()=>{
         // sem base (ramo SEM) a lista e a das reclamacoes do PROPRIO anuncio no ano:
         // e o que derruba ele mesmo sem categoria
-        const lst = rec.length ? rec : minhas.map(x=>({...x, sai:R().JANELA-x.dias}));
-        const tit = rec.length ? `As ${rec.length} ${esc(T('det_reclamacoes_base'))}` : minhas.length ? `As ${minhas.length} ${esc(T('det_reclamacoes_anuncio'))}` : esc(T('det_reclamacoes'));
+        const lst = rec.length ? rec : o.todas.map(x=>({...x, sai:R().JANELA-x.dias})).sort((a,b)=>(b.conta?1:0)-(a.conta?1:0) || a.sai-b.sai);
+        const nc = lst.filter(x=>x.conta).length, nn = lst.length-nc;
+        const extra = nn ? ` <span class="muted" style="font-weight:400">· ${nn} não ${nn>1?'contam':'conta'}</span>` : '';
+        const tit = !lst.length ? esc(T('det_reclamacoes'))
+          : (nc ? `As ${nc} ${esc(rec.length?T('det_reclamacoes_base'):T('det_reclamacoes_anuncio'))}` : esc(T('det_reclamacoes'))) + extra;
         return `<div class="dt"><span class="n">.03</span>${tit}</div>
       ${lst.length?lst.map((r,k)=>{
         // cada reclamacao abre a VENDA dela no ML (a pagina mostra a reclamacao, o produto e o
@@ -639,7 +656,7 @@ function detalhe(i){
         <div><b>${esc(motivo(r.nome))}</b>
           ${r.pedido?`<a class="lk2" href="https://www.mercadolivre.com.br/vendas/${esc(r.pedido)}/detalhe" target="_blank" rel="noopener" title="Abrir a venda ${esc(r.pedido)} no Mercado Livre — é preciso estar logado como ${esc((D.conta||{}).nick||'esta conta')} neste navegador">${esc(T('lnk_venda'))}</a>`:''}
           <span class="muted">${dm(r.data)} · ${prod}</span></div>
-        <div class="num muted">${r.item===i.id?(r.pesa?'<b>pesa agora</b>':'pesa pouco')+' · ':''}sai em ${r.sai}d</div></div>`; }).join('')
+        <div class="num muted">${!r.conta?`<b>${esc(r.desfecho==='ml_cobriu'?T('selo_ml_cobriu'):T('selo_favor'))}</b>`:(r.item===i.id?(r.pesa?'<b>pesa agora</b>':'pesa pouco')+' · ':'')+`sai em ${r.sai}d`}</div></div>`; }).join('')
         +(lst.length>7?`<button type="button" class="vermais" data-ver="${i.id}"
              aria-expanded="false">+ ${lst.length-7} mais</button>`:'')
        :'<div class="muted sm">Nenhuma na base desta nota.</div>'}
@@ -825,7 +842,7 @@ function vistaCategorias(cats){
        :c.papel==='mestre'?`<span class="tag neu plain">${esc(T('tag_tem_espelho'))}</span>`:''}</td>
     <td class="num">${mil(c.vendas365)}<br><span class="muted" style="font-size:12px">${mil(c.vendas60)} em 60d</span></td>
     <td class="num">${c.reclamacoes||'<span class="muted">0</span>'}
-      ${(()=>{const g=c.grupos||{},o=(g.ARREPENDIMENTO||0)+(g.ENTREGA||0);
+      ${(()=>{const g=c.grupos||{},o=(g.ARREPENDIMENTO||0)+(g.ENTREGA||0)+(D.reclamacoes||[]).filter(r=>r.categoria===c.id&&!r.conta).length;
         return o?`<br><span class="muted" style="font-size:12px">+${o} não contam</span>`:''})()}
       ${c.cancelamentos?`<br><span class="muted" style="font-size:12px">${c.cancelamentos} cancel. seu${c.cancelamentos>1?'s':''}</span>`:''}</td>
     <td class="num"><span class="tx">${c.taxa==null?'':`<i class="dot ${cs(c.taxa)}" aria-hidden="true"></i>`}${pc(c.taxa)}</span>
@@ -1121,6 +1138,8 @@ function conferir(D){
     if(i.pune) pune++; if(i.dormente) dorm++; if(i.sem_nota) sn++; if(i.freeze) frz++;
     if(i.base_vendas && Math.abs((i.taxa||0)-100*i.reclamacoes/i.base_vendas)>1e-6) p.push(i.id+': taxa não bate com reclamações ÷ vendas');
   }
+  const lst=D.reclamacoes||[];
+  if(D.total_conta!==lst.filter(r=>r.conta).length) p.push('total de reclamações que contam ≠ lista');
   if(pune+dorm!==forte+punido) p.push(`card "perdendo exposição" (${pune+dorm}) ≠ chips preto + vinho (${forte+punido})`);
   if(sn!==semnota) p.push(`card "sem nota ainda" (${sn}) ≠ chips (${semnota})`);
   if(frz!==decola) p.push(`Decola (${frz}) ≠ chips (${decola})`);
@@ -1160,6 +1179,26 @@ async function carrega(f, automatico){
   $('#att').innerHTML = esc(T('btn_atualizar'))+' <span class="arr" aria-hidden="true">→</span>';
   C_AVISO = C.aviso || null;
   topo(C.ligado);
+  // ATUALIZACAO AUTOMATICA DO PAINEL: o servidor confere o repositorio publico (atualizador.py);
+  // se ha versao nova, a tela pede a troca, espera o servidor voltar e recarrega. Uma tentativa
+  // por versao nesta aba — se der errado, segue na versao atual e diz o motivo.
+  const A = C.atualizacao || {};
+  if(A.disponivel && A.versao && A.versao!==C.pacote && !lembra('att_'+A.versao)){
+    lembra('att_'+A.versao, '1');
+    const st0=$('#status'); st0.classList.remove('falha');
+    st0.textContent='Atualizando o painel para a versão '+A.versao+'…';
+    let r={};
+    try{ const ctrl=new AbortController(); const tt=setTimeout(()=>ctrl.abort(),60000);
+      r=await(await fetch('/api/atualizar_painel',{method:'POST',signal:ctrl.signal})).json(); clearTimeout(tt); }
+    catch(e){ r={erro:'não consegui falar com o painel'}; }
+    if(r.ok){
+      st0.textContent='Painel atualizado para a versão '+A.versao+' — reiniciando…';
+      for(let k=0;k<90;k++){ await new Promise(z=>setTimeout(z,1000));
+        try{ const c2=await(await fetch('/api/conta')).json(); if(c2.pacote===A.versao){ location.reload(); return; } }catch(e){} }
+      st0.textContent='⚠ o painel foi atualizado, mas o servidor não voltou — feche e abra de novo com ligar.py'; st0.classList.add('falha'); return;
+    }
+    st0.textContent='⚠ não consegui atualizar o painel: '+(r.erro||'?')+' — seguindo na versão '+(C.pacote||''); st0.classList.add('falha');
+  }
   if(!C.ligado) return telaLogin(C);
   const main=$('#app'), st=$('#status'), att=$('#att');
   if(f){
@@ -1185,7 +1224,7 @@ async function carrega(f, automatico){
   // AUTO-CONSERTO: sem dados, formato velho ou conferencia reprovada -> coleta de
   // novo sozinho, uma vez. So depois disso a tela bloqueia e pede ajuda.
   const precisa = D.vazio ? 'primeira leitura da conta'
-                : (D.versao!==undefined && D.versao!==6) ? 'dados de uma versão anterior'
+                : (D.versao!==undefined && D.versao!==VERSAO_DADOS) ? 'dados de uma versão anterior'
                 : null;
   const prob = precisa ? [] : conferir(D);
   if(precisa || prob.length){

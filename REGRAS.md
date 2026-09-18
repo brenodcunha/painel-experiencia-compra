@@ -47,6 +47,7 @@ não. Valor ou cor que o painel não conhece vira **aviso**, nunca silêncio.
 | cinza pela regra 100/200 | 88% · 91% · 93% · 93% (a "categoria" do ML parece ser a **família**, o pai: 91% e 95% nas duas primeiras) |
 | **reclamação do próprio anúncio derruba só ele** (irmão sem reclamação fica melhor ou igual) | 96–100% dos pares entre anúncios que **venderam nos últimos 60 dias**; contando vizinhos parados cai a 88–99% — é a nota parada do vizinho que quebra a comparação, não a regra |
 | reclamação pesa forte por **~60 dias** e depois vai perdendo peso | com reclamação recente 35% em 100 · sem, 95% |
+| **reclamação que o vendedor ganhou ou que o ML cobriu não pesa** (`resolution.benefited` inclui `respondent`) | 19 anúncios só com essas (e que venderam depois): 19 em 100 · pares na mesma categoria com o mesmo nº de reclamações do comprador e uma dessas a mais: 6 piores × 5 melhores em 207 (vendedor ganhou), 0 × 2 em 61 (ML cobriu) — contra 172 × 8 quando a "a mais" é do comprador (18/09/2026) |
 | **nota parada**: o ML só recalcula quando o anúncio vende | 0 de 51 com venda depois da data do cálculo |
 | **cálculo antigo** (180 dias) ainda em alguns anúncios | o ML avisa no artigo; a API devolve outra forma |
 
@@ -67,6 +68,7 @@ Regra **estrutural** (não é lista de nomes — se o ML criar motivo novo, a re
 ```
 conta  ⇔  reason.flow termina em "_delivered"   (o produto chegou)
        E  reason.name ≠ "repentant_buyer"        (não é arrependimento)
+       E  "respondent" ∉ resolution.benefited     (o vendedor não ganhou, nem o ML cobriu)
 ```
 
 | grupo | o que é | conta? |
@@ -75,10 +77,28 @@ conta  ⇔  reason.flow termina em "_delivered"   (o produto chegou)
 | ARREPENDIMENTO | chegou bem, o comprador desistiu | não |
 | ENTREGA | não chegou, atrasou, foi cancelado | não |
 
+Desfecho (`status` + `resolution.benefited`, que a busca já traz — `regras.desfecho`):
+
+| desfecho | `benefited` | conta? | na tela |
+|---|---|---|---|
+| comprador | `[complainant]` | **sim** | pesa agora / pesa pouco |
+| vendedor | `[respondent]` (quase sempre `no_bpp`) | **não** | `fechada a seu favor · não conta` |
+| ml_cobriu | `[complainant, respondent]` (`coverage_decision`, `warehouse_decision`) | **não** | `o Mercado Livre cobriu · não conta` |
+| sem_beneficiado | vazio (`timeout`, `return_expired`, acordo…) | sim | — |
+| aberta | `status ≠ closed` | sim | — |
+
+Medido em 4 contas (18/09/2026, `audit/passo0_medicoes.md`): as duas que não contam não movem a
+nota; a do comprador move. `affects-reputation` não serve: 1.048 das 1.107 que o comprador ganhou
+vêm `not_affected` e derrubam a nota mesmo assim. A reclamação que não conta **fica na lista**
+(`conta = false`, com selo) e **fora de todos os contadores** (`r60/r180/r365`, categoria, taxa,
+`total_conta`); `total_nao_conta` guarda quantas. `checar` confere que `r365`/`r60` de cada anúncio
+batem com as que contam na lista. A cada coleta o desfecho é relido: o que fechar a favor do
+vendedor sai da conta sozinho.
+
 - **Nunca** classificar pelo campo `detail`. `/claims/{id}/affects-reputation` é outra
   métrica (reputação do vendedor). Reclamação cujo pedido saiu da janela fica fora
   (`reclamacoes_sem_pedido`), sem aviso.
-- Cada reclamação carrega `pesa` = tem até 60 dias (pesa forte no próprio anúncio).
+- Cada reclamação carrega `pesa` = **conta e** tem até 60 dias (pesa forte no próprio anúncio).
 
 ### 1.4 Cancelamento — conta só o que **você** cancela, e é mostrado, não punido
 - A busca de pedidos traz quem pediu o cancelamento (`cancel_detail.requested_by`: `seller`,
@@ -119,7 +139,8 @@ conta  ⇔  reason.flow termina em "_delivered"   (o produto chegou)
 
 Contadores por anúncio e por categoria em **60, 180 e 365 dias**; última venda de cada
 anúncio (`dias_sem_venda`). Gravação **atômica** (`.tmp` + `os.replace`).
-**Versão do formato:** `dados.json` carrega `versao: 6`; a tela recusa outra **e coleta de novo
+**Versão do formato:** `dados.json` carrega `versao: 7`; a tela (`VERSAO_DADOS` no `index.html`, conferido
+pelo empacotador contra `regras.VERSAO`) recusa outra **e coleta de novo
 sozinha** (é assim que uma versão nova do painel recalcula a conta de quem já usava).
 **Avisos:** tudo que não foi lido inteiro, tudo que o painel não conhece, e toda regra
 que falhou na conferência interna vai em `avisos[]` e aparece na linha de status.
@@ -166,7 +187,8 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
 ### 3.4 Detalhe do anúncio
 - `.01 A conta`: reclamações ÷ vendas da **base** (anúncio 60 d, anúncio 365 d,
   categoria, cálculo antigo 180 d ou nenhuma); quantas reclamações são **deste anúncio**
-  no ano e quantas **ainda pesam** (≤ 60 dias); quantas vendas dele **você cancelou** no ano
+  no ano, quantas **ainda pesam** (≤ 60 dias) e quantas **não contam** (fechadas a seu favor /
+  cobertas pelo ML); quantas vendas dele **você cancelou** no ano
   (e nos últimos 60 dias); quando parado, o tempo sem vender —
   **honesto com a idade** (`idade` = dias desde `date_created`): `não vende há N dias` ·
   `nunca vendeu desde que foi criado, há N dias` (anúncio com menos de um ano) ·
@@ -175,9 +197,12 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
 - `.02 Por que essa nota`: o texto do próprio ML + **uma frase** dizendo o que segura a
   nota: reclamação própria que ainda pesa (e em quantos dias deixa de pesar) · reclamação
   própria já leve · categoria puxando (com o contador dela) · cancelamentos seus, se houver ·
-  e, se não vende, *"o Mercado Livre só refaz a nota quando ele vender"*.
-- `.03 Reclamações`: as da base; sem base, as do próprio anúncio. Cada uma com
-  `pesa agora` / `pesa pouco`, em quantos dias sai da janela, o link **abrir a venda ↗**
+  fechadas a seu favor / cobertas pelo ML, se houver (não contam) · e, se não vende,
+  *"o Mercado Livre só refaz a nota quando ele vender"*.
+- `.03 Reclamações`: as da base; sem base, as do próprio anúncio. As que contam primeiro, cada
+  uma com `pesa agora` / `pesa pouco` e em quantos dias sai da janela; as que não contam depois,
+  com o selo `fechada a seu favor · não conta` ou `o Mercado Livre cobriu · não conta`; todas com
+  o link **abrir a venda ↗**
   (`mercadolivre.com.br/vendas/{pedido}/detalhe` — a página "Detalhe da venda", onde estão a
   reclamação, o produto e o comprador; testado logado). O link abre na conta logada **no
   navegador**: se for outra, o ML mostra erro — por isso a lista avisa qual conta é preciso estar e, quando é de outro anúncio da
@@ -213,6 +238,25 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
 
 ---
 
+### 4.1 Atualização automática do painel (`atualizador.py`)
+- **Fonte:** o repositório público fixado em `atualizador.REPO` (ramo `RAMO`). Versão = `PACOTE` do
+  `regras.py` — a do repositório (arquivo cru) contra a desta pasta. Só HTTPS; nunca outro endereço.
+- **Quando:** `ligar.py` confere antes de subir; o servidor confere a cada 6 h (`INTERVALO`) e entrega
+  o resultado em `/api/conta → atualizacao` sem esperar a rede; a tela, ao ver `disponivel`, pede
+  `POST /api/atualizar_painel`, espera o servidor voltar e recarrega (uma tentativa por versão, por aba).
+- **O que troca:** só os arquivos da lista fechada `LEVA` do `empacotar.py` que veio no zip (lida por
+  `ast`, sem executar) + `audit/fixtures/*.json`. **Nunca** `conta.json`, `dados.json`, `*.bak`, logs,
+  `__pycache__` — a lista os recusa mesmo que o zip os traga. Caminho absoluto ou `..` → recusa.
+- **Antes de tocar em qualquer arquivo:** o zip traz a versão anunciada; todos os arquivos da lista
+  estão lá; todo `.py` compila. Qualquer falha → nada muda, e a tela diz o motivo na linha de status.
+- **Troca:** arquivo por arquivo, atômica (`.tmp` + `os.replace`). Depois o servidor **se encerra** e
+  `ligar.py --reiniciar` sobe o novo (a versão velha fica na memória do processo antigo). Com o
+  `ligar.py` trocando os arquivos e o servidor no ar, ele pede `POST /api/reiniciar` e sobe o novo.
+- **Sem internet / repositório fora:** silêncio; o painel segue na versão que está.
+- **Confiança:** quem controla o repositório controla o que roda nos painéis. Só publicar o que passou
+  pelo `empacotar.py`; conta do GitHub com 2FA. Painéis anteriores à 1.7 não têm o atualizador:
+  precisam de um último download à mão.
+
 ## 5. Texto e nomes — o que não pode mudar
 - Nada na tela cita conta, anúncio, categoria ou número de uma conta específica.
 - **Rótulos fixos — moram em `regras.ROTULOS`, a tela só desenha o que vem de lá** (chip da
@@ -223,7 +267,7 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
   - Legenda: `Taxa` · `Nota` · `Situação`
   - Colunas da tabela: `Anúncio` · `Nota` · `Base` · `Vendas 365d` · `60d` · `Reclam. na base` · `Taxa da base` · `Situação`
   - Base: `o anúncio` · `a categoria` · `cálculo antigo` · `nenhuma`
-  - Detalhe: `A conta` · `Como cai sozinha` · `Por que essa nota` · `O ML recomenda` · `Reclamações` · `reclamações na base` · `reclamações deste anúncio no ano` · `Abrir no Mercado Livre ↗` · `abrir a venda ↗`
+  - Detalhe: `A conta` · `Como cai sozinha` · `Por que essa nota` · `O ML recomenda` · `Reclamações` · `reclamações na base` · `reclamações deste anúncio no ano` · `Abrir no Mercado Livre ↗` · `abrir a venda ↗` · `fechada a seu favor · não conta` · `o Mercado Livre cobriu · não conta`
   - Aba Categorias: `Categoria` · `Vendas 365d` · `Reclam.` · `Taxa` · `Anúncios` · `Notas que está dando` · `Para onde dá para mover` · `contador zerado` · `contador baixo` · `nota boa comprovada` · `dá a nota` · `abaixo de` · `espelho de` · `tem espelho` · `espelho desta` · `a mestre desta` · `Nenhuma categoria sua está punindo`
   - Estados vazios e bloqueio: `Nada encontrado com esse filtro.` · `Esta conta não tem nenhum anúncio.` · `Sem dados ainda.` · `O painel não passou na própria conferência`
   - Conexão: `Conecte a sua conta do Mercado Livre` · `Cole os dados do seu aplicativo` · `Autorize e copie o código`
@@ -234,6 +278,7 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
 - Não escreve nada na conta (só `GET`; o único `POST` é o login OAuth).
 - Não prevê nota. Não move anúncio de categoria — só mostra para onde daria.
 - Não recebe webhook. Só Mercado Livre **Brasil**.
+- Da internet só baixa o próprio painel, do repositório fixado em `atualizador.REPO` (4.1). Nunca outro código.
 
 ## 7. Como conferir uma conta nova em 2 minutos
 1. Linha de status **sem ⚠**. Se houver, ler: é limite da API, coisa desconhecida ou
@@ -264,7 +309,8 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
   com contagem.
 - **Cada furo vira fixture** em `audit/fixtures/` (gerada por `gerar.py`): punido sem
   base, cálculo antigo, nota 50, conta sem Decola, atalho dos 60 dias, gêmea da mesma
-  família, cancelamentos do vendedor, conta de 3.000. `_quebrado.json` **tem** de falhar.
+  família, cancelamentos do vendedor, conta de 3.000, reclamação fechada a seu favor / coberta
+  pelo ML (na lista, fora da conta). `_quebrado.json` **tem** de falhar.
 - `python empacotar.py` roda as regras em todas as fixtures e no `dados.json` da máquina
   **antes** de montar o zip. Regra falhando ou dado de conta dentro → **não sai pacote**.
 - `python audit/verificar_regras.py <arquivo>` e `python audit/placar.py <arquivo>` rodam

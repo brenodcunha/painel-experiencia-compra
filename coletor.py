@@ -39,10 +39,23 @@ REGRA ESTRUTURAL, sem lista de nomes:
 
     conta = reason.flow termina em "_delivered"   (o produto chegou)
             E reason.name != "repentant_buyer"    (nao e arrependimento)
+            E "respondent" nao esta em resolution.benefited   (desfecho, abaixo)
 
-Ou seja: so problema com o PRODUTO ENTREGUE. Nao conta entrega, atraso,
-cancelamento nem desistencia. Se o ML criar um motivo novo, a regra segue
-valendo — por isso ela olha `flow`, nao uma lista chumbada.
+Ou seja: so problema com o PRODUTO ENTREGUE que ficou por conta do vendedor. Nao
+conta entrega, atraso, cancelamento nem desistencia. Se o ML criar um motivo
+novo, a regra segue valendo — por isso ela olha `flow`, nao uma lista chumbada.
+
+DESFECHO (auditado em 18/09/2026, 4 contas, audit/passo0_medicoes.md): a busca ja
+traz `resolution.benefited` — quem ficou com o dinheiro. So a que o COMPRADOR ganhou
+pesa. Se o vendedor esta entre os beneficiados (ele ganhou, `no_bpp`; ou o ML cobriu
+do proprio bolso, `coverage_decision`/`warehouse_decision`) a nota nao se mexe:
+    so com essas, e vendeu depois delas        19 anuncios -> 19 em 100
+    pares na mesma categoria, mesmo n de reclamacoes do comprador, uma dessas a mais:
+        vendedor ganhou  6 piores x 5 melhores em 207 | ML cobriu  0 x 2 em 61
+        (controle, uma do COMPRADOR a mais: 172 piores x 8 em 710)
+Ela fica na lista com selo e fora dos contadores. `affects-reputation` NAO serve:
+1.048 das 1.107 que o comprador ganhou vem "not_affected" e derrubam a nota assim
+mesmo. A regra mora em regras.desfecho / regras.conta_desfecho.
 
 MEDIDO — anuncios cujas reclamacoes sao SO de um flow, e a nota que tem:
     post_purchase_delivered    58 anuncios -> 29% punidos
@@ -271,7 +284,9 @@ def _reclamacoes(uid, ords, prog, avisos):
         c["_txt"] = r.get("detail") or c.get("reason_id") or ""
         c["_flow"] = r.get("flow") or ""
         c["_grupo"] = _grupo(c["_nome"], c["_flow"])
-        c["_conta"] = c["_grupo"] == "PRODUTO"
+        # desfecho: quem ficou com o dinheiro. Vendedor entre os beneficiados = nao pesa (medido)
+        c["_desfecho"] = regras.desfecho(c.get("status"), (c.get("resolution") or {}).get("benefited"))
+        c["_conta"] = c["_grupo"] == "PRODUTO" and regras.conta_desfecho(c["_desfecho"])
     return cl, RZ
 
 
@@ -478,22 +493,25 @@ def coleta(prog=lambda s: None):
             gi[p["i"]][c["_grupo"]] += 1
         if _cat:
             gc[_cat][c["_grupo"]] += 1
-        if not c["_conta"]:
+        if c["_grupo"] != "PRODUTO":
             continue
         d = _dias(c["date_created"])
         cat = (meta.get(p["i"]) or {}).get("category_id") or p["c"]
-        if p["i"]:
-            r365i[p["i"]] += 1
-            if d <= 60:
-                r60i[p["i"]] += 1
-            if d <= JANELA_ANTIGA:
-                r180i[p["i"]] += 1
-        if cat:
-            r365c[cat] += 1
-            if d <= 60:
-                r60c[cat] += 1
-            if d <= JANELA_ANTIGA:
-                r180c[cat] += 1
+        # toda reclamacao de produto vai para a lista (com selo se nao conta);
+        # so a que CONTA entra nos contadores
+        if c["_conta"]:
+            if p["i"]:
+                r365i[p["i"]] += 1
+                if d <= 60:
+                    r60i[p["i"]] += 1
+                if d <= JANELA_ANTIGA:
+                    r180i[p["i"]] += 1
+            if cat:
+                r365c[cat] += 1
+                if d <= 60:
+                    r60c[cat] += 1
+                if d <= JANELA_ANTIGA:
+                    r180c[cat] += 1
         validas.append((c, p, cat, d))
 
     # categorias: nome, caminho e DOMINIO, tudo de uma vez
@@ -686,7 +704,8 @@ def coleta(prog=lambda s: None):
 
     lista = []
     for c, p, cat, d in sorted(validas, key=lambda z: z[0]["date_created"], reverse=True):
-        lista.append(dict(id=c["id"], data=c["date_created"][:10], dias=d, pesa=d <= PESO, grupo=c["_grupo"],
+        lista.append(dict(id=c["id"], data=c["date_created"][:10], dias=d, grupo=c["_grupo"],
+                          desfecho=c["_desfecho"], conta=c["_conta"], pesa=bool(c["_conta"] and d <= PESO),
                           pedido=c.get("_ped"),           # para abrir a venda no ML (detalhe da venda)
                           motivo=c.get("reason_id"), nome=c["_nome"], motivo_txt=c["_txt"],
                           sai60=60 - d, sai365=365 - d,
@@ -715,7 +734,9 @@ def coleta(prog=lambda s: None):
              regras=dict(LIM_ITEM=LIM_ITEM, LIM_CAT=LIM_CAT, JANELA=JANELA,
                          JANELA_RAPIDA=JANELA_RAPIDA, JANELA_ANTIGA=JANELA_ANTIGA, PESO=PESO),
              peso_reclamacao=PESO, calculo_antigo=antigos,
-             total_claims=len(cl), total_conta=len(validas), total_arrependimento=arrep,
+             total_claims=len(cl), total_conta=sum(1 for c, _, _, _ in validas if c["_conta"]),
+             total_nao_conta=sum(1 for c, _, _, _ in validas if not c["_conta"]),
+             total_arrependimento=arrep,
              por_grupo=dict(por_grupo), metricas_ml=met,
              vendas60=sum(v60c.values()), vendas365=sum(v365c.values()),
              # cancelamentos da conta por quem pediu: seller (conta na experiencia), buyer, meli

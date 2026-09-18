@@ -9,12 +9,15 @@ e explica, anúncio por anúncio, por que a nota está onde está.
 python ligar.py
 ```
 Sobe o servidor em **http://localhost:8796** e abre o navegador. Se já estiver no ar, só
-abre o navegador. Ao entrar nesta pasta, faça isso e informe o endereço.
+abre o navegador. Antes de subir, confere o repositório público (`atualizador.py`) e atualiza o
+painel sozinho se há versão nova. Ao entrar nesta pasta, faça isso e informe o endereço.
 
 ## O que NUNCA fazer
 - Não enviar, commitar, copiar ou mostrar `conta.json` (credencial do vendedor) nem
   `dados.json` (dados da conta dele). Os dois ficam só nesta máquina e já estão no `.gitignore`.
 - Não escrever nada na conta do Mercado Livre: o painel só lê (o único POST é o login OAuth).
+- Não apontar `atualizador.REPO` para outro lugar nem publicar no repositório o que não passou pelo
+  `empacotar.py`: é de lá que os painéis dos vendedores baixam código sozinhos.
 
 ## Onde está a regra
 - `regras.py` — a regra da métrica (fonte única). O coletor classifica com ela; a tela só

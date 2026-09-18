@@ -73,8 +73,10 @@ def categoria(cid, itens, gemeas=(), cancelamentos=0):
                              acima_limiar=g[2] >= regras.LIM_CAT) for g in gemeas])
 
 
-def reclamacao(cid, item_id, cat, dias):
-    return dict(id=cid, data='2026-01-01', dias=dias, pesa=dias <= PESO, grupo='PRODUTO', motivo='PDD9999', pedido='2000000000001',
+def reclamacao(cid, item_id, cat, dias, desfecho='comprador'):
+    conta_ = regras.conta_desfecho(desfecho)     # vendedor ganhou / ML cobriu: na lista, fora da conta
+    return dict(id=cid, data='2026-01-01', dias=dias, grupo='PRODUTO', desfecho=desfecho, conta=conta_,
+                pesa=bool(conta_ and dias <= PESO), motivo='PDD9999', pedido='2000000000001',
                 nome='not_working_item', motivo_txt='', sai60=60 - dias, sai365=365 - dias,
                 item=item_id, categoria=cat, cat_nome='Categoria ' + cat, titulo='Produto')
 
@@ -88,7 +90,8 @@ def conta(nick, itens, cats, recl=()):
                             JANELA_RAPIDA=regras.JANELA_RAPIDA, JANELA_ANTIGA=regras.JANELA_ANTIGA, PESO=regras.PESO),
                 conferencia={'ok': True, 'falhas': [], 'desconhecidos': [], 'leitura': []},
                 calculo_antigo=sum(1 for i in itens if i['calculo'] == 'antigo'),
-                total_claims=len(recl), total_conta=len(recl), total_arrependimento=0, por_grupo={'PRODUTO': len(recl)},
+                total_claims=len(recl), total_conta=sum(1 for r in recl if r['conta']),
+                total_nao_conta=sum(1 for r in recl if not r['conta']), total_arrependimento=0, por_grupo={'PRODUTO': len(recl)},
                 metricas_ml={}, vendas60=0, vendas365=sum(c['vendas365'] for c in cats), entra_na_conta=[],
                 cancelamentos_conta={'seller': sum(i['cancelamentos'] for i in itens)}, cancelamentos_vendedor=sum(i['cancelamentos'] for i in itens),
                 itens=itens, categorias=cats, reclamacoes=recl, reclamacoes_sem_pedido=0, avisos=[], segundos=1.0)
@@ -121,7 +124,7 @@ def main():
                motivo=['Ela ainda não foi calculada porque seu anúncio não teve vendas nos últimos 180 dias.']),
           item('MLB1000000005', 'C2', nota=100, cor='green', v365=40)]
     grava('03_calculo_antigo.json', conta('ANTIGO', it, [categoria('C2', it)],
-                                          [reclamacao('R1', 'MLB1000000003', 'C2', 20), reclamacao('R2', 'MLB1000000003', 'C2', 100)]))
+                                          [reclamacao('R1', 'MLB1000000003', 'C2', 70), reclamacao('R2', 'MLB1000000003', 'C2', 100)]))
 
     # 04 nota 50 (faixa laranja) — pune como 65
     VOL = {'C3': (300, 20, 'P3')}
@@ -142,7 +145,7 @@ def main():
           item('MLB1000000022', 'C6', v365=3, nota=30, cor='red', freeze=True),           # Decola
           item('MLB1000000023', 'C6', v365=0, nota=-1, cor=None, dias_sem_venda=None, idade=25)]  # HERDA cinza, novo: sem nota ainda
     grava('06_atalho60_semnota_decola.json', conta('ATALHO', it, [categoria('C5', it), categoria('C6', it)],
-                                                   [reclamacao('R%d' % k, 'MLB1000000020', 'C5', 10 * k) for k in range(1, 10)]))
+                                                   [reclamacao('R%d' % k, 'MLB1000000020', 'C5', 20 * k) for k in range(1, 10)]))
 
     # 07 gemeas: mesma familia (nao serve) e outra familia (serve)
     VOL = {'C7': (260, 30, 'PAI7')}
@@ -171,6 +174,16 @@ def main():
     it = [item('MLB1000000050', 'C8', nota=65, cor='orange', v365=20, cancelamentos=2, cancelamentos60=1),
           item('MLB1000000051', 'C8', nota=100, cor='green', v365=30)]
     grava('09_cancelamentos.json', conta('CANCEL', it, [categoria('C8', it, cancelamentos=2)]))
+
+    # 10 desfecho: reclamacao que o vendedor ganhou e que o ML cobriu ficam na lista, fora da conta
+    VOL = {'C10': (300, 20, 'P10')}
+    it = [item('MLB1000000060', 'C10', v365=150, r365=1, r60=1, nota=100, cor='green'),
+          item('MLB1000000061', 'C10', v365=20, nota=65, cor='orange')]
+    grava('10_desfecho.json', conta('DESFECHO', it, [categoria('C10', it)],
+                                    [reclamacao('R1', 'MLB1000000060', 'C10', 15),
+                                     reclamacao('R2', 'MLB1000000060', 'C10', 30, desfecho='vendedor'),
+                                     reclamacao('R3', 'MLB1000000060', 'C10', 45, desfecho='ml_cobriu'),
+                                     reclamacao('R4', 'MLB1000000061', 'C10', 200, desfecho='vendedor')]))
 
     # _quebrado: TEM de falhar (situacao trocada de proposito)
     VOL = {'C9': (300, 30, 'P9')}

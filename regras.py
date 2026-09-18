@@ -10,9 +10,9 @@ A regra e a oficial do Mercado Livre (mercadolivre.com.br/ajuda/31968) e foi
 conferida em duas contas contra o texto que o proprio ML escreve em cada
 anuncio; os numeros estao em audit/passo0_medicoes.md e audit/placar.py.
 """
-VERSAO = 6              # formato do dados.json; a tela recusa versao diferente (e coleta de novo sozinha)
-PACOTE = "1.5"          # versao do pacote entregue aos vendedores (aparece na tela)
-DATA_REGRAS = "17/09/2026"   # quando estas regras foram conferidas pela ultima vez
+VERSAO = 7              # formato do dados.json; a tela recusa versao diferente (e coleta de novo sozinha)
+PACOTE = "1.7"          # versao do pacote entregue aos vendedores (aparece na tela)
+DATA_REGRAS = "18/09/2026"   # quando estas regras foram conferidas pela ultima vez
 LIM_ITEM = 100          # vendas do ANUNCIO -> usa so ele
 LIM_CAT = 200           # vendas da CATEGORIA no ano -> herda dela; abaixo, cinza
 JANELA = 365            # janela padrao (o "ultimo ano" do fluxograma)
@@ -21,6 +21,35 @@ JANELA_ANTIGA = 180     # anuncios que o ML ainda nao migrou para o calculo novo
 PESO = 60               # dias em que a reclamacao do proprio anuncio pesa forte
 NOTAS_VISTAS = (-1, 30, 50, 65, 75, 100)
 CORES_VISTAS = (None, "gray", "red", "orange", "green")   # gray = cinza (medido)
+
+# DESFECHO da reclamacao (`resolution.benefited` da API, que a busca ja traz): quem ficou
+# com o dinheiro. Medido em 18/09/2026 em 4 contas (audit/passo0_medicoes.md): so a que o
+# COMPRADOR ganhou pesa na Experiencia de Compra. Quando o vendedor esta entre os
+# beneficiados — ele ganhou (`no_bpp`) ou o ML cobriu do proprio bolso (`coverage_decision`,
+# `warehouse_decision`) — a nota se comporta como se ela nao existisse: 19 anuncios so com
+# essas (e que venderam depois), todos em 100; pares na mesma categoria com o mesmo numero
+# de reclamacoes do comprador e uma dessas a mais: 6 piores x 5 melhores em 207 (vendedor
+# ganhou), 0 x 2 em 61 (ML cobriu) — contra 172 piores x 8 quando a "a mais" e do comprador.
+# Ela continua na lista (o vendedor ve que existiu), com selo, fora de todos os contadores.
+DESFECHOS = ("comprador", "vendedor", "ml_cobriu", "sem_beneficiado", "aberta")
+NAO_PESA = ("vendedor", "ml_cobriu")
+
+
+def desfecho(status, beneficiados):
+    """`status` + `resolution.benefited` da API -> um de DESFECHOS."""
+    if status != "closed":
+        return "aberta"
+    b = set(beneficiados or ())
+    if "respondent" in b:
+        return "ml_cobriu" if "complainant" in b else "vendedor"
+    if "complainant" in b:
+        return "comprador"
+    return "sem_beneficiado"
+
+
+def conta_desfecho(d):
+    """A reclamacao de PRODUTO entra na conta? Nao se o vendedor ganhou ou o ML cobriu."""
+    return d not in NAO_PESA
 
 # Os casos da coluna Situacao. A legenda e ESTA lista, sempre inteira, com a
 # contagem ao lado — o painel fica identico em qualquer conta.
@@ -56,6 +85,8 @@ ROTULOS = {
     "det_reclamacoes": "Reclamações",
     "det_reclamacoes_base": "reclamações na base",
     "det_reclamacoes_anuncio": "reclamações deste anúncio no ano",
+    "selo_favor": "fechada a seu favor · não conta",
+    "selo_ml_cobriu": "o Mercado Livre cobriu · não conta",
     "lnk_ml": "Abrir no Mercado Livre ↗", "lnk_venda": "abrir a venda ↗",
     "cat_col_categoria": "Categoria", "cat_col_vendas": "Vendas 365d", "cat_col_recl": "Reclam.",
     "cat_col_taxa": "Taxa", "cat_col_anuncios": "Anúncios",
@@ -188,13 +219,32 @@ def checar(d):
                 falhas.append("categoria %s oferece a si mesma" % c["id"])
             if bool(g.get("mesma_familia")) != bool(c.get("pai") and g.get("pai") == c.get("pai")):
                 falhas.append("categoria %s gemea %s: mesma_familia inconsistente" % (c["id"], g["id"]))
-    for r in d.get("reclamacoes") or []:
+    por_item = {}
+    lst = d.get("reclamacoes") or []
+    for r in lst:
         if r["grupo"] != "PRODUTO":
-            falhas.append("reclamacao %s na lista das que contam com grupo %s" % (r["id"], r["grupo"]))
-        if r.get("pesa") != (r["dias"] <= PESO):
+            falhas.append("reclamacao %s na lista de produto com grupo %s" % (r["id"], r["grupo"]))
+        if r.get("desfecho") not in DESFECHOS:
+            falhas.append("reclamacao %s: desfecho desconhecido %s" % (r["id"], r.get("desfecho")))
+        elif r.get("conta") != conta_desfecho(r["desfecho"]):
+            falhas.append("reclamacao %s: conta=%s com desfecho %s" % (r["id"], r.get("conta"), r["desfecho"]))
+        if r.get("pesa") != bool(r.get("conta") and r["dias"] <= PESO):
             falhas.append("reclamacao %s: pesa inconsistente" % r["id"])
-    if d.get("total_conta") != len(d.get("reclamacoes") or []):
-        falhas.append("total_conta != lista de reclamacoes")
+        if r.get("item"):
+            por_item.setdefault(r["item"], []).append(r)
+    if d.get("total_conta") != sum(1 for r in lst if r.get("conta")):
+        falhas.append("total_conta != reclamacoes que contam na lista")
+    if d.get("total_nao_conta") != sum(1 for r in lst if not r.get("conta")):
+        falhas.append("total_nao_conta != reclamacoes fora da conta na lista")
+    # a lista tem TODAS as de produto; nos contadores do anuncio so pode haver as que CONTAM
+    for i in it:
+        rs = por_item.get(i["id"])
+        if not rs:
+            continue
+        c365 = sum(1 for r in rs if r.get("conta"))
+        c60 = sum(1 for r in rs if r.get("conta") and r["dias"] <= JANELA_RAPIDA)
+        if i.get("r365") != c365 or i.get("r60") != c60:
+            falhas.append("%s r365/r60 = %s/%s, a lista tem %d/%d que contam" % (i["id"], i.get("r365"), i.get("r60"), c365, c60))
     return falhas, notas
 
 
@@ -244,8 +294,13 @@ def reaplicar(d):
     d["rotulos"] = dict(ROTULOS)
     d["regras"] = dict(LIM_ITEM=LIM_ITEM, LIM_CAT=LIM_CAT, JANELA=JANELA,
                        JANELA_RAPIDA=JANELA_RAPIDA, JANELA_ANTIGA=JANELA_ANTIGA, PESO=PESO)
-    for r in d.get("reclamacoes") or []:
-        r["pesa"] = r["dias"] <= PESO
+    lst = d.get("reclamacoes") or []
+    for r in lst:
+        if r.get("desfecho") in DESFECHOS:
+            r["conta"] = conta_desfecho(r["desfecho"])
+        r["pesa"] = bool(r.get("conta") and r["dias"] <= PESO)
+    d["total_conta"] = sum(1 for r in lst if r.get("conta"))
+    d["total_nao_conta"] = sum(1 for r in lst if not r.get("conta"))
     return True
 
 

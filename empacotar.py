@@ -18,7 +18,7 @@ VERSAO = regras.PACOTE      # fonte unica: a tela mostra a mesma versao
 
 # ---- o que VAI (e so isto) ----
 LEVA = [
-    "index.html", "servidor.py", "coletor.py", "conta.py", "ml.py", "regras.py", "ligar.py",
+    "index.html", "servidor.py", "coletor.py", "conta.py", "ml.py", "regras.py", "ligar.py", "atualizador.py",
     "LEIAME.md", "README.md", "REGRAS.md", "AGENTS.md", "CLAUDE.md", ".gitignore", "LICENSE", "empacotar.py",
     # kit de testes LIMPO (projeto publico: quem mexer prova que nao quebrou a regra)
     "audit/verificar_regras.py", "audit/verificar_textos.py", "audit/placar.py", "audit/fixtures/gerar.py",
