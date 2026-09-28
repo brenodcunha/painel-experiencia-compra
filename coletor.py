@@ -359,6 +359,15 @@ def coleta(prog=lambda s: None):
         st, r = g("/reputation/items/%s/purchase_experience/integrators?locale=pt_BR" % i)
         if st != 200:
             return i, None
+        # 200 sem `reputation` (corpo vazio, pagina de erro com HTTP 200): tenta UMA vez de novo
+        # antes de chamar de formato desconhecido. Auditado em 28/09/2026: todas as formas que o ML
+        # documenta (developers.mercadolibre.com.ar/en_us/shopping-experience-marketplace) trazem
+        # `subtitles`; em 3.171 anuncios de 4 contas nenhuma veio sem. Isso e leitura ruim, nao forma nova.
+        if not isinstance(r, dict) or not r.get("reputation"):
+            time.sleep(1)
+            st, r = g("/reputation/items/%s/purchase_experience/integrators?locale=pt_BR" % i)
+            if st != 200 or not isinstance(r, dict):
+                return i, None
         rep = r.get("reputation") or {}
 
         def sub(bl):

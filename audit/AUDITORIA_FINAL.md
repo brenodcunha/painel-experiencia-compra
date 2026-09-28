@@ -106,3 +106,6 @@ fixtures e no dado real, sem dado de conta dentro. Pronto para distribuir.
 - **v1.8** — achado em campo (28/09): um anúncio em formato de resposta desconhecido bloqueava o painel
   inteiro. Agora só regra quebrada bloqueia; formato desconhecido e leitura incompleta tentam de novo
   uma vez e depois mostram os cards com aviso vermelho (o aviso diz quais campos vieram). Fixture 11.
+- **v1.9** — auditoria da rota da nota contra a documentação do ML: as duas formas conhecidas são as únicas
+  documentadas (todas com `subtitles`); 0 desconhecidas em 3.171 anúncios ao vivo. Resposta 200 sem
+  `reputation` é lida de novo uma vez antes de virar aviso.
