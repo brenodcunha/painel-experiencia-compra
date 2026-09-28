@@ -117,6 +117,7 @@ vendedor sai da conta sozinho.
 |---|---|---|
 | `reasoning` (texto em prosa, gerado por IA) | **cálculo novo** | regra da seção 1 |
 | sem `reasoning`, com `subtitles` + `metrics_details` ("nos últimos 180 dias…") | **cálculo antigo**, anúncio não migrado | `calculo = antigo`, ramo `ANTIGO`, contadores de **180 dias**, mostra os números que o ML escreveu |
+| `is_kit` + `up_id`, sem `reputation` (anúncio em **kit**) | a nota mora no produto | lê `/reputation/user_products/{up_id}/…` (mesma forma prosa, mesma nota — testado); sem nota lá, cinza com a frase no detalhe, sem aviso |
 | nenhuma das duas | não documentada pelo ML (todas as formas documentadas trazem `subtitles`; 0 em 3.171 anúncios, 28/09/2026) | tenta de novo uma vez; se persistir, mostra a nota que leu e avisa com os campos que vieram |
 | `reputation.value` como texto | converte | número |
 | `freeze` preenchido (Programa Decola) | punição anulada | `ruim = false`, chip Decola |

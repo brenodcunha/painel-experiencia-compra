@@ -18,7 +18,7 @@ VOL = {}     # categoria -> (vendas365, reclamacoes365, pai); definido por fixtu
 
 
 def item(mlb, cat, status='active', nota=100, cor='green', v60=0, v365=0, v180=None, r60=0, r365=0, r180=None,
-         freeze=False, calculo='novo', ml=None, dias_sem_venda=30, idade=400, motivo=None, cancelamentos=0, cancelamentos60=0):
+         freeze=False, calculo='novo', ml=None, dias_sem_venda=30, idade=400, motivo=None, cancelamentos=0, cancelamentos60=0, kit=False):
     vcat, rcat, _ = VOL[cat]
     v180 = v365 if v180 is None else v180
     r180 = r365 if r180 is None else r180
@@ -50,7 +50,7 @@ def item(mlb, cat, status='active', nota=100, cor='green', v60=0, v365=0, v180=N
                 nota=nota, cor=cor, rotulo=None, pune=pune, dormente=dormente, ruim=ruim, sem_nota=sem_nota,
                 situacao=regras.situacao(freeze, pune, dormente, sem_nota, ativo), dias_sem_venda=dias_sem_venda, idade=idade, criado=None,
                 sub_status=[] if ativo else ['out_of_stock'], pausa=None if ativo else 'sem_estoque',
-                freeze=freeze, freeze_txt='Programa Decola' if freeze else '', consequencia='', up_id=None,
+                freeze=freeze, freeze_txt='Programa Decola' if freeze else '', consequencia='', up_id=None, kit=kit,
                 motivo=motivo, recomendacoes=[], acao='', ml_herda=ramo == 'HERDA', grupos={}, grupos_cat={},
                 pode_mover=v365 == 0)
 
@@ -196,6 +196,14 @@ def main():
     d11['avisos'] = [aviso]
     d11['conferencia'] = {'ok': True, 'falhas': [], 'desconhecidos': [aviso], 'leitura': [aviso]}
     grava('11_formato_desconhecido.json', d11)
+
+    # 12 kit: a nota vem do produto (up_id); um kit sem nota em lugar nenhum fica cinza (achado em campo, v1.10)
+    VOL = {'C12': (400, 10, 'P12')}
+    it = [item('MLB1000000080', 'C12', v365=120, nota=100, cor='green', kit=True),
+          item('MLB1000000081', 'C12', v365=15, nota=-1, cor=None, kit=True,
+               motivo=['Anúncio em kit: o Mercado Livre não devolveu nota de experiência nem para o kit nem para o produto dele.']),
+          item('MLB1000000082', 'C12', v365=40, nota=75, cor='green')]
+    grava('12_kit.json', conta('KIT', it, [categoria('C12', it)]))
 
     # _quebrado: TEM de falhar (situacao trocada de proposito)
     VOL = {'C9': (300, 30, 'P9')}

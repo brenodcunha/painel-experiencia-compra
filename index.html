@@ -613,6 +613,7 @@ function detalhe(i){
       <div class="chips">
         <span class="ch ${pesam?'on':''}">${minhas.length} neste anúncio no ano${pesam?`<i>${pesam} ainda pesa${pesam>1?'m':''}</i>`:''}</span>
         ${favor?`<span class="ch">${favor} não ${favor>1?'contam':'conta'} <i>a seu favor / o Mercado Livre cobriu</i></span>`:''}
+        ${i.kit?`<span class="ch">kit <i>nota lida pelo produto</i></span>`:''}
         ${fora?`<span class="ch">${fora} não contam <i>arrependimento / entrega</i></span>`:''}
         ${i.cancelamentos?`<span class="ch ${i.cancelamentos60?'on':''}">${i.cancelamentos} cancelamento${i.cancelamentos>1?'s':''} seu${i.cancelamentos>1?'s':''} no ano${i.cancelamentos60?`<i>${i.cancelamentos60} nos últimos 60 dias</i>`:''}</span>`:''}
         ${parada?`<span class="ch">${parada}</span>`:''}

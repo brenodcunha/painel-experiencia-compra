@@ -290,6 +290,104 @@ def _reclamacoes(uid, ords, prog, avisos):
     return cl, RZ
 
 
+ROTA_ITEM = "/reputation/items/%s/purchase_experience/integrators?locale=pt_BR"
+ROTA_UP = "/reputation/user_products/%s/purchase_experience/integrators?locale=pt_BR"
+
+
+def ler_nota(i):
+    """Le a nota de Experiencia de Compra de UM anuncio. Devolve (id, dict) ou (id, None) se a
+    rota nao respondeu. Fora de coleta() para ser testavel com `g` falso (audit)."""
+    st, r = g(ROTA_ITEM % i)
+    if st != 200:
+        return i, None
+    kit = isinstance(r, dict) and bool(r.get("is_kit"))
+    if kit and not r.get("reputation") and r.get("up_id"):
+        # KIT (achado em campo em 28/09/2026): a rota do anuncio devolve so {is_kit,
+        # kit_components, status, title, up_id}, sem nota. A nota mora no PRODUTO (up_id):
+        # /reputation/user_products/{up_id}/... — mesma forma prosa e mesma nota que a rota
+        # do anuncio (testado nos anuncios comuns). Sem nota la, o kit fica cinza, sem aviso.
+        st2, r2 = g(ROTA_UP % r["up_id"])
+        if st2 == 200 and isinstance(r2, dict) and r2.get("reputation"):
+            r2.setdefault("up_id", r["up_id"])
+            r = r2
+    elif not isinstance(r, dict) or not r.get("reputation"):
+        # 200 sem `reputation` (corpo vazio, pagina de erro com HTTP 200): tenta UMA vez de novo
+        # antes de chamar de formato desconhecido. Auditado em 28/09/2026: todas as formas que o ML
+        # documenta (developers.mercadolibre.com.ar/en_us/shopping-experience-marketplace) trazem
+        # `subtitles`; em 3.171 anuncios de 4 contas nenhuma veio sem. Isso e leitura ruim, nao forma nova.
+        time.sleep(1)
+        st, r = g(ROTA_ITEM % i)
+        if st != 200 or not isinstance(r, dict):
+            return i, None
+    rep = r.get("reputation") or {}
+
+    def sub(bl):
+        return [x.get("text", "") for x in ((r.get(bl) or {}).get("subtitles") or [])]
+    # DUAS formas de resposta (medido em 16/09/2026): "prosa" traz `reasoning`
+    # (texto gerado por IA — calculo novo); "template" nao traz `reasoning`,
+    # escreve no topo com placeholders {0}<b>{1} e diz "nos ultimos 180 dias"
+    # (calculo antigo, que o ML ainda aplica em alguns anuncios). Uma terceira
+    # forma, que o painel nao conhece, vira aviso — nunca silencio.
+    forma = "prosa" if "reasoning" in r else ("template" if "subtitles" in r else ("kit" if kit else "outra"))
+    motivo = sub("reasoning")
+    if not motivo:
+        motivo = [re.sub(r"\{\d+\}", "", x.get("text") or "")
+                  for x in (r.get("subtitles") or []) if x.get("text")]
+    if not motivo and forma == "kit":
+        motivo = ["Anúncio em kit: o Mercado Livre não devolveu nota de experiência nem para o kit nem para o produto dele."]
+    # ⚠️ `value` volta int quase sempre, mas em alguns anuncios vem string.
+    v = rep.get("value")
+    if isinstance(v, str):
+        try:
+            v = int(v)
+        except ValueError:
+            v = None
+    # Programa Decola: a nota continua ruim, mas a PUNICAO e anulada.
+    # ⚠️ os contadores deste loop NAO podem se chamar `v`: os placeholders
+    # do freeze sao ["<b>", "</b>"], e a variavel da nota era sobrescrita.
+    frz_txt = (r.get("freeze") or {}).get("text") or ""
+    for idx, ph in enumerate((r.get("freeze") or {}).get("placeholders") or []):
+        frz_txt = frz_txt.replace("{%d}" % idx, ph)
+    frz = bool(frz_txt)
+    cor = rep.get("color")
+    estranho = []
+    if forma == "outra":
+        # diz QUAIS campos vieram: e o que permite reconhecer a forma nova depois
+        estranho.append("resposta em formato desconhecido (campos: %s)"
+                        % ", ".join(sorted(r.keys()))[:100] if isinstance(r, dict) else "resposta em formato desconhecido")
+    if v is not None and v not in regras.NOTAS_VISTAS:
+        estranho.append("nota fora da escala (%s)" % v)
+    if cor not in regras.CORES_VISTAS:
+        estranho.append("cor desconhecida (%s)" % cor)
+    # os numeros que o ML escreve na forma template ("fez N vendas e teve N problemas")
+    ml = None
+    if forma == "template":
+        md = r.get("metrics_details") or {}
+        dist = md.get("distribution") or {}
+        probs = md.get("problems") or []
+        txt = " ".join(motivo)
+        mv = re.search(r"fez (\d+) venda", txt)
+        mp = re.search(r"teve (\d+) problema", txt)
+        ml = {"vendas": int(mv.group(1)) if mv else None,
+              "problemas": int(mp.group(1)) if mp else None,
+              "reclamacoes": sum(p.get("claims") or 0 for p in probs) if probs else None,
+              "cancelamentos": sum(p.get("cancellations") or 0 for p in probs) if probs else None,
+              "de": (dist.get("from") or "")[:10], "ate": (dist.get("to") or "")[:10]}
+    return i, {"valor": v, "cor": cor, "texto": rep.get("text"),
+               "ruim": regras.punitiva(v, cor) and not frz, "freeze": frz, "freeze_txt": frz_txt,
+               # `consequence` so vem preenchido em anuncio ATIVO — nao e sinal de punicao
+               "consequencia": ((r.get("consequence") or {}).get("title") or {}).get("text") or "",
+               "up_id": r.get("up_id"), "kit": kit,
+               "motivo": motivo,                       # o ML explica a nota
+               "recomendacoes": sub("recommendations"),  # gerado por IA, do produto
+               "acao": ((r.get("principal_actionable") or {}).get("text") or ""),
+               "entra": sub(""),
+               "forma": forma, "calculo": "antigo" if forma == "template" else "novo",
+               "ml": ml, "estranho": estranho,
+               # a frase abaixo denuncia que o ML usou a CATEGORIA
+               "ml_herda": any("informações suficientes" in t for t in motivo)}
+
+
 def coleta(prog=lambda s: None):
     t0 = time.time()
     marcos = []
@@ -355,87 +453,9 @@ def coleta(prog=lambda s: None):
 
     _marco("anuncios prontos")
 
-    def nota(i):
-        st, r = g("/reputation/items/%s/purchase_experience/integrators?locale=pt_BR" % i)
-        if st != 200:
-            return i, None
-        # 200 sem `reputation` (corpo vazio, pagina de erro com HTTP 200): tenta UMA vez de novo
-        # antes de chamar de formato desconhecido. Auditado em 28/09/2026: todas as formas que o ML
-        # documenta (developers.mercadolibre.com.ar/en_us/shopping-experience-marketplace) trazem
-        # `subtitles`; em 3.171 anuncios de 4 contas nenhuma veio sem. Isso e leitura ruim, nao forma nova.
-        if not isinstance(r, dict) or not r.get("reputation"):
-            time.sleep(1)
-            st, r = g("/reputation/items/%s/purchase_experience/integrators?locale=pt_BR" % i)
-            if st != 200 or not isinstance(r, dict):
-                return i, None
-        rep = r.get("reputation") or {}
-
-        def sub(bl):
-            return [x.get("text", "") for x in ((r.get(bl) or {}).get("subtitles") or [])]
-        # DUAS formas de resposta (medido em 16/09/2026): "prosa" traz `reasoning`
-        # (texto gerado por IA — calculo novo); "template" nao traz `reasoning`,
-        # escreve no topo com placeholders {0}<b>{1} e diz "nos ultimos 180 dias"
-        # (calculo antigo, que o ML ainda aplica em alguns anuncios). Uma terceira
-        # forma, que o painel nao conhece, vira aviso — nunca silencio.
-        forma = "prosa" if "reasoning" in r else ("template" if "subtitles" in r else "outra")
-        motivo = sub("reasoning")
-        if not motivo:
-            motivo = [re.sub(r"\{\d+\}", "", x.get("text") or "")
-                      for x in (r.get("subtitles") or []) if x.get("text")]
-        # ⚠️ `value` volta int quase sempre, mas em alguns anuncios vem string.
-        v = rep.get("value")
-        if isinstance(v, str):
-            try:
-                v = int(v)
-            except ValueError:
-                v = None
-        # Programa Decola: a nota continua ruim, mas a PUNICAO e anulada.
-        # ⚠️ os contadores deste loop NAO podem se chamar `v`: os placeholders
-        # do freeze sao ["<b>", "</b>"], e a variavel da nota era sobrescrita.
-        frz_txt = (r.get("freeze") or {}).get("text") or ""
-        for idx, ph in enumerate((r.get("freeze") or {}).get("placeholders") or []):
-            frz_txt = frz_txt.replace("{%d}" % idx, ph)
-        frz = bool(frz_txt)
-        cor = rep.get("color")
-        estranho = []
-        if forma == "outra":
-            # diz QUAIS campos vieram: e o que permite reconhecer a forma nova depois
-            estranho.append("resposta em formato desconhecido (campos: %s)"
-                            % ", ".join(sorted(r.keys()))[:100] if isinstance(r, dict) else "resposta em formato desconhecido")
-        if v is not None and v not in regras.NOTAS_VISTAS:
-            estranho.append("nota fora da escala (%s)" % v)
-        if cor not in regras.CORES_VISTAS:
-            estranho.append("cor desconhecida (%s)" % cor)
-        # os numeros que o ML escreve na forma template ("fez N vendas e teve N problemas")
-        ml = None
-        if forma == "template":
-            md = r.get("metrics_details") or {}
-            dist = md.get("distribution") or {}
-            probs = md.get("problems") or []
-            txt = " ".join(motivo)
-            mv = re.search(r"fez (\d+) venda", txt)
-            mp = re.search(r"teve (\d+) problema", txt)
-            ml = {"vendas": int(mv.group(1)) if mv else None,
-                  "problemas": int(mp.group(1)) if mp else None,
-                  "reclamacoes": sum(p.get("claims") or 0 for p in probs) if probs else None,
-                  "cancelamentos": sum(p.get("cancellations") or 0 for p in probs) if probs else None,
-                  "de": (dist.get("from") or "")[:10], "ate": (dist.get("to") or "")[:10]}
-        return i, {"valor": v, "cor": cor, "texto": rep.get("text"),
-                   "ruim": regras.punitiva(v, cor) and not frz, "freeze": frz, "freeze_txt": frz_txt,
-                   # `consequence` so vem preenchido em anuncio ATIVO — nao e sinal de punicao
-                   "consequencia": ((r.get("consequence") or {}).get("title") or {}).get("text") or "",
-                   "up_id": r.get("up_id"),
-                   "motivo": motivo,                       # o ML explica a nota
-                   "recomendacoes": sub("recommendations"),  # gerado por IA, do produto
-                   "acao": ((r.get("principal_actionable") or {}).get("text") or ""),
-                   "entra": sub(""),
-                   "forma": forma, "calculo": "antigo" if forma == "template" else "novo",
-                   "ml": ml, "estranho": estranho,
-                   # a frase abaixo denuncia que o ML usou a CATEGORIA
-                   "ml_herda": any("informações suficientes" in t for t in motivo)}
     notas, entra = {}, []
     with ThreadPoolExecutor(max_workers=12) as ex:
-        for i, n in ex.map(nota, list(meta)):
+        for i, n in ex.map(ler_nota, list(meta)):
             notas[i] = n
             if n and n["entra"] and not entra:
                 entra = n["entra"]
@@ -641,7 +661,7 @@ def coleta(prog=lambda s: None):
             sub_status=sub, pausa=pausa,
             freeze=bool(n.get("freeze")), freeze_txt=n.get("freeze_txt"),
             consequencia=n.get("consequencia"),
-            up_id=n.get("up_id"), motivo=n.get("motivo") or [],
+            up_id=n.get("up_id"), kit=bool(n.get("kit")), motivo=n.get("motivo") or [],
             recomendacoes=n.get("recomendacoes") or [], acao=n.get("acao"),
             ml_herda=n.get("ml_herda"),
             grupos=dict(gi.get(i, {})), grupos_cat=dict(gc.get(c, {})),

@@ -109,3 +109,6 @@ fixtures e no dado real, sem dado de conta dentro. Pronto para distribuir.
 - **v1.9** — auditoria da rota da nota contra a documentação do ML: as duas formas conhecidas são as únicas
   documentadas (todas com `subtitles`); 0 desconhecidas em 3.171 anúncios ao vivo. Resposta 200 sem
   `reputation` é lida de novo uma vez antes de virar aviso.
+- **v1.10** — o "formato desconhecido" visto em campo era um anúncio em **kit** (`is_kit`, `kit_components`,
+  `up_id`, sem nota na rota do anúncio): a nota é lida na rota do produto (`user_products/{up_id}`). `nota()`
+  virou `ler_nota()` no módulo, testável com `g` falso (`audit/passo0/teste_ler_nota.py`). Fixture 12.
