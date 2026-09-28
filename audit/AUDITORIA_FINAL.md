@@ -103,3 +103,6 @@ fixtures e no dado real, sem dado de conta dentro. Pronto para distribuir.
   repositório público; versão nova é baixada, conferida (versão, lista fechada, compila) e trocada
   arquivo a arquivo, nunca `conta.json`/`dados.json`; o servidor se reinicia sozinho. Testado com um
   repositório falso local (`PAINEL_ORIGEM`). `VERSAO_DADOS` no `index.html` conferido pelo empacotador.
+- **v1.8** — achado em campo (28/09): um anúncio em formato de resposta desconhecido bloqueava o painel
+  inteiro. Agora só regra quebrada bloqueia; formato desconhecido e leitura incompleta tentam de novo
+  uma vez e depois mostram os cards com aviso vermelho (o aviso diz quais campos vieram). Fixture 11.

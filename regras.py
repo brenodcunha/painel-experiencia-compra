@@ -11,7 +11,7 @@ conferida em duas contas contra o texto que o proprio ML escreve em cada
 anuncio; os numeros estao em audit/passo0_medicoes.md e audit/placar.py.
 """
 VERSAO = 7              # formato do dados.json; a tela recusa versao diferente (e coleta de novo sozinha)
-PACOTE = "1.7"          # versao do pacote entregue aos vendedores (aparece na tela)
+PACOTE = "1.8"          # versao do pacote entregue aos vendedores (aparece na tela)
 DATA_REGRAS = "18/09/2026"   # quando estas regras foram conferidas pela ultima vez
 LIM_ITEM = 100          # vendas do ANUNCIO -> usa so ele
 LIM_CAT = 200           # vendas da CATEGORIA no ano -> herda dela; abaixo, cinza
@@ -305,13 +305,13 @@ def reaplicar(d):
 
 
 def veredito(d):
-    """Fecha o veredito que a tela le: ok so se nenhuma regra falhou, nada e
-    desconhecido e a leitura da API foi completa."""
+    """Fecha o veredito que a tela le: ok = nenhuma REGRA falhou. Formato desconhecido e
+    leitura incompleta ficam em `desconhecidos`/`leitura` e viram aviso, nao bloqueio."""
     falhas, _ = checar(d)
     v = dict(d.get("conferencia") or {})
     v["falhas"] = falhas[:50]
     v.setdefault("desconhecidos", [])
     v.setdefault("leitura", [])
-    v["ok"] = not falhas and not v["desconhecidos"] and not v["leitura"]
+    v["ok"] = not falhas
     d["conferencia"] = v
     return v

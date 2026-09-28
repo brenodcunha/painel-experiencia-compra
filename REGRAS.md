@@ -299,12 +299,14 @@ as da Taxa. Cor nova só entra medindo ΔE em OKLCH e ≥ 4,5:1 com o texto bran
   regra** (`regras.reaplicar`: ramo, base, taxa, faixa, `sem_nota`, Situação, categorias,
   gêmeas, peso das reclamações — tudo recalculado dos contadores crus) e fecha o veredito
   (`regras.veredito`). Classificação velha ou inconsistente se conserta sozinha.
-- **Só mostra os cards se tudo passou.** A tela lê o veredito **e repete o essencial por
-  conta própria** (versão, casos, Situação de cada anúncio, taxa, cards = chips). Se algo
-  reprovou — regra, valor desconhecido **ou leitura incompleta da API** — ela **coleta de
-  novo sozinha, uma vez**; se ainda reprovar, tela de bloqueio com a lista do que falhou e
-  o botão *Coletar de novo*. Sem dados ou formato velho: a primeira coleta também é
-  automática. Nenhum número aparece sem passar por isso.
+- **Regra quebrada bloqueia; leitura incompleta avisa.** A tela lê o veredito **e repete o
+  essencial por conta própria** (versão, casos, Situação de cada anúncio, taxa, cards = chips).
+  Regra reprovada → **coleta de novo sozinha, uma vez**; se ainda reprovar, tela de bloqueio
+  com a lista do que falhou e o botão *Coletar de novo*. Leitura incompleta da API ou resposta
+  em formato desconhecido → coleta de novo sozinha uma vez e, se persistir, **mostra os cards
+  com o aviso em vermelho** na linha de status (o anúncio desconhecido aparece com a nota que
+  deu para ler, sem o texto do ML, e o aviso diz quais campos vieram). Um anúncio estranho não
+  esconde os outros. Sem dados ou formato velho: a primeira coleta também é automática.
 - **Nada some em silêncio**: forma de resposta, nota ou cor desconhecidas viram aviso
   com contagem.
 - **Cada furo vira fixture** em `audit/fixtures/` (gerada por `gerar.py`): punido sem

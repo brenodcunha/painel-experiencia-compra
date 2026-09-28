@@ -185,6 +185,18 @@ def main():
                                      reclamacao('R3', 'MLB1000000060', 'C10', 45, desfecho='ml_cobriu'),
                                      reclamacao('R4', 'MLB1000000061', 'C10', 200, desfecho='vendedor')]))
 
+    # 11 formato desconhecido: um anuncio veio numa forma que o painel nao conhece — a nota
+    # que deu para ler fica, o texto do ML nao; aviso na tela, NAO bloqueio (achado em campo, v1.8)
+    VOL = {'C11': (300, 12, 'P11')}
+    it = [item('MLB1000000070', 'C11', nota=100, cor='green', v365=30, motivo=[]),
+          item('MLB1000000071', 'C11', nota=65, cor='orange', v365=20)]
+    it[0]['forma'] = 'outra'
+    d11 = conta('DESCONHECIDO', it, [categoria('C11', it)])
+    aviso = '1 anuncio(s) com resposta em formato desconhecido (campos: reputation, status)'
+    d11['avisos'] = [aviso]
+    d11['conferencia'] = {'ok': True, 'falhas': [], 'desconhecidos': [aviso], 'leitura': [aviso]}
+    grava('11_formato_desconhecido.json', d11)
+
     # _quebrado: TEM de falhar (situacao trocada de proposito)
     VOL = {'C9': (300, 30, 'P9')}
     it = [item('MLB1000000040', 'C9', nota=30, cor='red')]

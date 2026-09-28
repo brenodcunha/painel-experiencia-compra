@@ -390,7 +390,9 @@ def coleta(prog=lambda s: None):
         cor = rep.get("color")
         estranho = []
         if forma == "outra":
-            estranho.append("resposta em formato desconhecido")
+            # diz QUAIS campos vieram: e o que permite reconhecer a forma nova depois
+            estranho.append("resposta em formato desconhecido (campos: %s)"
+                            % ", ".join(sorted(r.keys()))[:100] if isinstance(r, dict) else "resposta em formato desconhecido")
         if v is not None and v not in regras.NOTAS_VISTAS:
             estranho.append("nota fora da escala (%s)" % v)
         if cor not in regras.CORES_VISTAS:
@@ -754,10 +756,13 @@ def coleta(prog=lambda s: None):
     if falhas:
         avisos.append("conferencia interna: %d regra(s) falharam — %s"
                       % (len(falhas), "; ".join(falhas[:3])))
-    # veredito para a tela: sem "ok" aqui, ela NAO mostra card nenhum — so o que
-    # falhou e o botao de coletar de novo. Errado nao se mostra.
+    # veredito para a tela: REGRA que falhou bloqueia (sem "ok" ela nao mostra card nenhum —
+    # errado nao se mostra). Formato desconhecido ou leitura incompleta NAO bloqueiam: um
+    # anuncio estranho ou uma pagina que a API nao respondeu viram aviso vermelho na linha
+    # de status, e os outros 400 anuncios continuam na tela (medido em campo: bloquear tudo
+    # por um anuncio deixava o vendedor sem painel nenhum).
     leitura = [a for a in avisos if not a.startswith("conferencia interna")]
-    d["conferencia"] = {"ok": not falhas and not estranhas and not leitura, "falhas": falhas[:50],
+    d["conferencia"] = {"ok": not falhas, "falhas": falhas[:50],
                         "desconhecidos": ["%d anuncio(s) com %s" % (q, k) for k, q in sorted(estranhas.items())],
                         "leitura": leitura}
     # ⚠️ atomico: um travamento no meio deixava dados.json pela metade e o

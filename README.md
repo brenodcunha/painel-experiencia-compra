@@ -46,8 +46,10 @@ A primeira leitura acontece sozinha assim que você conecta. Depois, clique em
 
 Antes de mostrar qualquer número, o painel confere os próprios dados contra as regras.
 Se algo não bate (uma leitura que não veio inteira, um valor que ele não conhece), ele
-refaz a leitura sozinho; se ainda assim não passar, mostra **o que falhou** em vez dos
-números — nunca um painel errado.
+refaz a leitura sozinho; se uma regra ainda assim não passar, mostra **o que falhou** em vez
+dos números — nunca um painel errado. Se só a leitura veio incompleta (um anúncio num formato
+que o painel não conhece, uma página que a API não respondeu), ele mostra os números com o
+aviso em vermelho na linha de status.
 
 ## O que o painel mostra
 - **Perdendo exposição** — anúncios na faixa vermelha ou laranja (30, 50, 65), no ar

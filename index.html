@@ -1117,14 +1117,14 @@ function telaLogin(C, erro){
 
 // A TELA CONFERE ANTES DE MOSTRAR. O coletor ja conferiu (regras.checar) e gravou
 // o veredito em D.conferencia; a tela repete o essencial por conta propria — versao,
-// casos, situacao de cada anuncio, taxa, cards = chips. Qualquer falha: nenhum card,
+// casos, situacao de cada anuncio, taxa, cards = chips. REGRA que falha: nenhum card,
 // so a lista do que falhou e o botao de coletar de novo. Errado nao se mostra.
+// Formato desconhecido / leitura incompleta NAO bloqueiam: viram aviso vermelho na
+// linha de status (D.avisos) e os outros anuncios continuam na tela.
 function conferir(D){
   const p=[];
   if(D.conferencia && !D.conferencia.ok){
     (D.conferencia.falhas||[]).forEach(f=>p.push('regra: '+f));
-    (D.conferencia.desconhecidos||[]).forEach(f=>p.push('o painel não conhece: '+f));
-    (D.conferencia.leitura||[]).forEach(f=>p.push('leitura incompleta: '+f));
   }
   const casos=new Set((D.casos||[]).map(c=>c[0]));
   if(!casos.size) p.push('lista de casos da Situação ausente');
@@ -1227,6 +1227,10 @@ async function carrega(f, automatico){
                 : (D.versao!==undefined && D.versao!==VERSAO_DADOS) ? 'dados de uma versão anterior'
                 : null;
   const prob = precisa ? [] : conferir(D);
+  // leitura incompleta (pagina que a API nao respondeu, formato desconhecido): tenta UMA
+  // vez de novo sozinha; se persistir, mostra os cards com o aviso — nao bloqueia
+  const incompleta = !precisa && !prob.length && D.conferencia && ((D.conferencia.leitura||[]).length || (D.conferencia.desconhecidos||[]).length);
+  if(incompleta && reparo<1 && !f){ reparo++; st.textContent='a leitura veio incompleta — refazendo…'; return carrega(true, true); }
   if(precisa || prob.length){
     if(reparo<1 && !(f && !precisa && prob.length===0)){
       reparo++;
